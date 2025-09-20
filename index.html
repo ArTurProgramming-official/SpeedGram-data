@@ -235,6 +235,7 @@
             border-radius: 15px;
             max-width: 80%;
             word-wrap: break-word;
+            line-height: 1.4;
         }
         .chat-message.sender {
             align-self: flex-end;
@@ -256,16 +257,16 @@
         }
         .sticker-gallery {
             display: grid;
-            grid-template-columns: repeat(auto-fill, minmax(50px, 1fr));
+            grid-template-columns: repeat(auto-fill, minmax(40px, 1fr));
             gap: 10px;
             margin-top: 10px;
+            font-size: 2rem;
+            text-align: center;
         }
-        .sticker-gallery img {
-            width: 100%;
+        .sticker-gallery span {
             cursor: pointer;
-            transition: transform 0.2s;
         }
-        .sticker-gallery img:hover {
+        .sticker-gallery span:hover {
             transform: scale(1.1);
         }
     </style>
@@ -464,12 +465,12 @@
                             <i class="far fa-laugh-beam"></i>
                         </button>
                         <ul class="dropdown-menu p-2 sticker-gallery">
-                            <li><img src="https://em-content.zobj.net/source/microsoft-teams/363/grinning-face_1f600.png" onclick="sendSticker('1f600')"></li>
-                            <li><img src="https://em-content.zobj.net/source/microsoft-teams/363/face-with-tears-of-joy_1f602.png" onclick="sendSticker('1f602')"></li>
-                            <li><img src="https://em-content.zobj.net/source/microsoft-teams/363/crying-face_1f622.png" onclick="sendSticker('1f622')"></li>
-                            <li><img src="https://em-content.zobj.net/source/microsoft-teams/363/thinking-face_1f914.png" onclick="sendSticker('1f914')"></li>
-                            <li><img src="https://em-content.zobj.net/source/microsoft-teams/363/partying-face_1f973.png" onclick="sendSticker('1f973')"></li>
-                            <li><img src="https://em-content.zobj.net/source/microsoft-teams/363/money-bag_1f4b0.png" onclick="sendSticker('1f4b0')"></li>
+                            <span onclick="sendSticker('😀')">😀</span>
+                            <span onclick="sendSticker('😂')">😂</span>
+                            <span onclick="sendSticker('😢')">😢</span>
+                            <span onclick="sendSticker('🤔')">🤔</span>
+                            <span onclick="sendSticker('🥳')">🥳</span>
+                            <span onclick="sendSticker('💰')">💰</span>
                         </ul>
                         <button class="btn btn-primary" onclick="sendMessage()">Отправить</button>
                     </div>
@@ -1309,11 +1310,7 @@
                     const messageElement = document.createElement('div');
                     messageElement.className = `chat-message ${message.sender === currentUser.name ? 'sender' : 'recipient'}`;
 
-                    if (message.type === 'sticker') {
-                        messageElement.innerHTML = `<img src="https://em-content.zobj.net/source/microsoft-teams/363/${message.content}.png" width="50">`;
-                    } else {
-                        messageElement.textContent = message.content;
-                    }
+                    messageElement.textContent = message.content;
                     
                     const senderName = document.createElement('div');
                     senderName.className = 'chat-message-info';
@@ -1337,7 +1334,6 @@
                     sender: currentUser.name,
                     content: message,
                     timestamp: new Date().toISOString(),
-                    type: 'text'
                 });
                 chatInput.value = '';
             } catch (error) {
@@ -1345,13 +1341,12 @@
             }
         }
 
-        async function sendSticker(stickerCode) {
+        async function sendSticker(stickerEmoji) {
             try {
                 await firestore.collection('messages').add({
                     sender: currentUser.name,
-                    content: stickerCode,
+                    content: stickerEmoji,
                     timestamp: new Date().toISOString(),
-                    type: 'sticker'
                 });
             } catch (error) {
                 console.error('Error sending sticker:', error);
