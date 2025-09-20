@@ -236,6 +236,7 @@
             max-width: 80%;
             word-wrap: break-word;
             line-height: 1.4;
+            position: relative;
         }
         .chat-message.sender {
             align-self: flex-end;
@@ -252,22 +253,32 @@
             color: #6c757d;
             margin-top: 5px;
         }
+        .chat-delete-btn {
+            position: absolute;
+            top: 5px;
+            right: 5px;
+            font-size: 0.7rem;
+            color: #dc3545;
+            cursor: pointer;
+            opacity: 0.5;
+            transition: opacity 0.3s;
+        }
+        .chat-message:hover .chat-delete-btn {
+            opacity: 1;
+        }
         .chat-input-area {
             display: flex;
         }
-        .sticker-gallery {
-            display: grid;
-            grid-template-columns: repeat(auto-fill, minmax(40px, 1fr));
+        .task-complete-btn {
+            margin-top: 10px;
+        }
+        .approval-buttons {
+            display: flex;
             gap: 10px;
             margin-top: 10px;
-            font-size: 2rem;
-            text-align: center;
         }
-        .sticker-gallery span {
-            cursor: pointer;
-        }
-        .sticker-gallery span:hover {
-            transform: scale(1.1);
+        .purchase-btn {
+            margin-top: 10px;
         }
     </style>
 </head>
@@ -461,17 +472,6 @@
                         </div>
                     <div class="input-group">
                         <input type="text" id="chatMessageInput" class="form-control" placeholder="Напишите сообщение...">
-                        <button class="btn btn-secondary dropdown-toggle" type="button" data-bs-toggle="dropdown" aria-expanded="false">
-                            <i class="far fa-laugh-beam"></i>
-                        </button>
-                        <ul class="dropdown-menu p-2 sticker-gallery">
-                            <span onclick="sendSticker('😀')">😀</span>
-                            <span onclick="sendSticker('😂')">😂</span>
-                            <span onclick="sendSticker('😢')">😢</span>
-                            <span onclick="sendSticker('🤔')">🤔</span>
-                            <span onclick="sendSticker('🥳')">🥳</span>
-                            <span onclick="sendSticker('💰')">💰</span>
-                        </ul>
                         <button class="btn btn-primary" onclick="sendMessage()">Отправить</button>
                     </div>
                 </div>
@@ -624,7 +624,7 @@
                             <div class="col-md-4">
                                 <i class="fas fa-trophy feature-icon"></i>
                                 <h3>Соревнуйтесь</h3>
-                                <p>Следите за рейтингом между участниками</p>
+                                <p>Следите за рейтингом между участников</p>
                             </div>
                         </div>
                     </div>
@@ -961,6 +961,7 @@
                 loadHistory();
                 setupChatListener();
                 updateProfileSection();
+                loadPendingApprovals();
             } else {
                 document.getElementById('headerCoins').classList.add('hidden');
                 document.getElementById('infinityCoins').classList.add('hidden');
@@ -976,40 +977,13 @@
             document.getElementById('historySection').classList.add('hidden');
             document.getElementById('chatSection').classList.add('hidden');
             document.getElementById('profileSection').classList.add('hidden');
-
-            // Unsubscribe from chat updates when leaving the chat section
-            if (chatListener) {
-                chatListener();
-                chatListener = null;
-            }
             
-            const selectedSection = document.getElementById(sectionName + 'Section');
-            if (selectedSection) {
-                selectedSection.classList.remove('hidden');
-            }
-
-            const navLinks = document.querySelectorAll('.bottom-nav .nav-link');
-            navLinks.forEach(link => {
-                link.classList.remove('active');
-            });
-
-            const activeLink = document.querySelector(`.bottom-nav .nav-link[onclick*="${sectionName}"]`);
-            if (activeLink) {
-                activeLink.classList.add('active');
-            }
-            
-            if (sectionName === 'rating') {
-                updateRating();
-            } else if (sectionName === 'tasks') {
-                loadTasks();
-            } else if (sectionName === 'shop') {
-                loadProducts();
-            } else if (sectionName === 'history') {
-                loadHistory();
-            } else if (sectionName === 'chat') {
-                setupChatListener();
-            } else if (sectionName === 'profile') {
-                updateProfileSection();
+            if (sectionName === 'welcome') {
+                document.getElementById('welcomeSection').classList.remove('hidden');
+            } else if (sectionName === 'auth') {
+                document.getElementById('authSection').classList.remove('hidden');
+            } else {
+                document.getElementById(sectionName + 'Section').classList.remove('hidden');
             }
         }
 
@@ -1018,431 +992,650 @@
             ratingList.innerHTML = '';
             
             const sortedUsers = Object.entries(users)
-                .filter(([name, data]) => data && data.type === 'child')
+                .filter(([name, data]) => data && data.type !== 'mom')
                 .sort((a, b) => b[1].coins - a[1].coins);
             
             sortedUsers.forEach(([name, data], index) => {
-                const medal = index === 0 ? '🥇' : index === 1 ? '🥈' : index === 2 ? '🥉' : '';
+                const rank = index + 1;
+                const progress = Math.min(100, (data.coins / 100) * 100);
                 
-                const ratingElement = document.createElement('div');
-                ratingElement.className = 'col-md-6';
-                ratingElement.innerHTML = `
+                const card = document.createElement('div');
+                card.className = 'col-md-6 col-lg-4 mb-4';
+                card.innerHTML = `
                     <div class="card rating-card">
                         <div class="card-body">
-                            <div class="rating-avatar bg-primary">
+                            <div class="rating-avatar ${name === 'Arthur' ? 'arthur-bg' : 'arina-bg'}">
                                 <i class="fas fa-user"></i>
                             </div>
-                            <h3>${name} ${medal}</h3>
-                            <h4 class="text-primary"><i class="fas fa-coins"></i> ${data.coins} coins</h4>
-                            ${currentUser?.isMom ? `
-                                <div class="coins-control">
-                                    <button class="btn btn-success btn-sm" onclick="changeCoins('${name}', 1)">+</button>
-                                    <button class="btn btn-danger btn-sm" onclick="changeCoins('${name}', -1)">-</button>
-                                    <button class="btn btn-warning btn-sm" onclick="changeCoins('${name}', 5)">+5</button>
-                                    <button class="btn btn-info btn-sm" onclick="changeCoins('${name}', -5)">-5</button>
-                                </div>
-                            ` : ''}
+                            <h5 class="card-title">${name}</h5>
+                            <p class="card-text">
+                                <span class="coin-balance">
+                                    <i class="fas fa-coins"></i> ${data.coins} coins
+                                </span>
+                            </p>
                             <div class="progress">
-                                <div class="progress-bar bg-primary" role="progressbar" 
-                                    style="width: ${Math.min(data.coins, 100)}%"></div>
+                                <div class="progress-bar ${name === 'Arthur' ? 'bg-info' : 'bg-danger'}" 
+                                     role="progressbar" style="width: ${progress}%"></div>
                             </div>
-                            <p class="mt-3">Выполнено заданий: <strong>${data.tasksCompleted}</strong></p>
+                            <p class="small">Выполнено заданий: ${data.tasksCompleted || 0}</p>
+                            <p class="small">Место в рейтинге: ${rank}</p>
                         </div>
                     </div>
                 `;
-                ratingList.appendChild(ratingElement);
+                ratingList.appendChild(card);
             });
         }
 
-        async function changeCoins(userName, amount) {
-            if (!currentUser || !currentUser.isMom) return;
-            
-            const user = users[userName];
-            if (!user) return;
-            
-            user.coins += amount;
-            if (user.coins < 0) user.coins = 0;
-            
-            try {
-                await saveUserToFirebase(userName, user);
-                
-                const action = amount > 0 ? 'добавила' : 'убрала';
-                await addHistoryEntry(`Мама ${action} ${Math.abs(amount)} coins для ${userName}`);
-                
-                updateRating();
-            } catch (error) {
-                alert('Ошибка изменения coins');
-                console.error('Ошибка:', error);
-            }
-        }
-
-        async function addHistoryEntry(text) {
-            try {
-                const timestamp = new Date().toISOString();
-                await firestore.collection('history').add({
-                    text: text,
-                    timestamp: timestamp
-                });
-            } catch (error) {
-                console.error('Ошибка сохранения истории:', error);
-            }
-        }
-
-        async function resetSettings() {
-            if (!currentUser || !currentUser.isMom) return;
-            
-            if (!confirm('Вы уверены, что хотите сбросить все настройки? Это действие нельзя отменить!')) return;
-            
-            try {
-                await deleteCollection('tasks');
-                await deleteCollection('products');
-                await deleteCollection('history');
-                await deleteCollection('pendingApprovals');
-                await deleteCollection('messages');
-                
-                const usersRef = firestore.collection('users');
-                const usersSnapshot = await usersRef.where('type', '!=', 'mom').get();
-                const userBatch = firestore.batch();
-                usersSnapshot.forEach(doc => {
-                    userBatch.delete(doc.ref);
-                });
-                await userBatch.commit();
-                
-                alert('Все данные успешно сброшены!');
-                location.reload();
-                
-            } catch (error) {
-                console.error('Ошибка сброса настроек:', error);
-                alert('Ошибка при сбросе настроек.');
-            }
-        }
-
-        function formatDateTime(isoString) {
-            const date = new Date(isoString);
-            return `${date.toLocaleDateString()} ${date.toLocaleTimeString()}`;
-        }
-        
-        async function loadTasks() {
+        function loadTasks() {
             const tasksList = document.getElementById('tasksList');
             tasksList.innerHTML = '';
             
-            const tasksCollection = firestore.collection('tasks');
-            const tasksSnapshot = await tasksCollection.get();
-            
-            if (tasksSnapshot.empty) {
-                tasksList.innerHTML = '<p class="text-center">Нет доступных заданий.</p>';
-                return;
-            }
-            
-            tasksSnapshot.forEach(doc => {
-                const task = doc.data();
-                const taskId = doc.id;
-                
-                const taskCard = document.createElement('div');
-                taskCard.className = 'col-md-6';
-                taskCard.innerHTML = `
+            Object.entries(tasks).forEach(([taskId, task]) => {
+                const card = document.createElement('div');
+                card.className = 'col-md-6 col-lg-4 mb-4';
+                card.innerHTML = `
                     <div class="card task-card">
                         <div class="card-body">
                             <h5 class="card-title">${task.title}</h5>
-                            <p class="card-text">Награда: <strong>${task.coins}</strong> coins</p>
+                            <p class="card-text">Награда: <span class="coin-balance"><i class="fas fa-coins"></i> ${task.coins}</span></p>
+                            ${!currentUser.isMom ? `
+                                <button class="btn btn-primary task-complete-btn" onclick="completeTask('${taskId}')">
+                                    <i class="fas fa-check"></i> Выполнил(а)
+                                </button>
+                            ` : ''}
                         </div>
                     </div>
                 `;
-                tasksList.appendChild(taskCard);
+                tasksList.appendChild(card);
             });
         }
-        
-        async function loadProducts() {
+
+        function loadProducts() {
             const productsList = document.getElementById('productsList');
             productsList.innerHTML = '';
             
-            const productsCollection = firestore.collection('products');
-            const productsSnapshot = await productsCollection.get();
-            
-            if (productsSnapshot.empty) {
-                productsList.innerHTML = '<p class="text-center">Магазин пуст.</p>';
-                return;
-            }
-            
-            productsSnapshot.forEach(doc => {
-                const product = doc.data();
-                const productId = doc.id;
+            Object.entries(products).forEach(([productId, product]) => {
+                const canBuy = !currentUser.isMom && users[currentUser.name].coins >= product.price;
                 
-                const productCard = document.createElement('div');
-                productCard.className = 'col-md-6';
-                productCard.innerHTML = `
+                const card = document.createElement('div');
+                card.className = 'col-md-6 col-lg-4 mb-4';
+                card.innerHTML = `
                     <div class="card product-card">
                         <div class="card-body">
                             <h5 class="card-title">${product.title}</h5>
-                            <p class="card-text">${product.description}</p>
-                            <p class="card-text">Цена: <strong>${product.price}</strong> coins</p>
+                            <p class="card-text">${product.description || ''}</p>
+                            <p class="card-text">Цена: <span class="coin-balance"><i class="fas fa-coins"></i> ${product.price}</span></p>
+                            ${!currentUser.isMom ? `
+                                <button class="btn btn-primary purchase-btn" onclick="purchaseProduct('${productId}')" ${!canBuy ? 'disabled' : ''}>
+                                    <i class="fas fa-shopping-cart"></i> Купить
+                                </button>
+                            ` : ''}
                         </div>
                     </div>
                 `;
-                productsList.appendChild(productCard);
+                productsList.appendChild(card);
             });
         }
-        
-        async function loadHistory() {
-            const fullHistoryList = document.getElementById('fullHistoryList');
-            const userHistoryList = document.getElementById('userHistoryList');
-            
-            fullHistoryList.innerHTML = '';
-            userHistoryList.innerHTML = '';
 
-            const historySnapshot = await firestore.collection('history').orderBy('timestamp', 'desc').limit(100).get();
-            const currentHistory = [];
-            historySnapshot.forEach(doc => {
-                currentHistory.push(doc.data());
-            });
+        function loadHistory() {
+            const userHistoryList = document.getElementById('userHistoryList');
+            const fullHistoryList = document.getElementById('fullHistoryList');
             
-            // Полная история
-            if (currentUser?.isMom) {
-                if (currentHistory.length > 0) {
-                    currentHistory.forEach(item => {
-                        const historyElement = document.createElement('div');
-                        historyElement.className = 'history-item';
-                        historyElement.innerHTML = `
-                            <p>${item.text}</p>
-                            <span class="history-date">${formatDateTime(item.timestamp)}</span>
-                        `;
-                        fullHistoryList.appendChild(historyElement);
-                    });
-                } else {
-                    fullHistoryList.innerHTML = '<p class="text-center">История пуста.</p>';
-                }
+            userHistoryList.innerHTML = '';
+            fullHistoryList.innerHTML = '';
+            
+            if (history.length === 0) {
+                userHistoryList.innerHTML = '<p class="text-center">История пуста.</p>';
+                fullHistoryList.innerHTML = '<p class="text-center">История пуста.</p>';
+                return;
+            }
+            
+            // User history (only current user's actions)
+            const userHistory = history.filter(item => 
+                item.text.includes(currentUser.name) || 
+                (item.text.includes('купил') && item.text.includes(currentUser.name)) ||
+                (item.text.includes('перевел') && item.text.includes(currentUser.name))
+            );
+            
+            if (userHistory.length === 0) {
+                userHistoryList.innerHTML = '<p class="text-center">Ваша история пуста.</p>';
             } else {
-                // История текущего пользователя
-                const userHistory = currentHistory.filter(item => item.text.includes(currentUser.name));
-                if (userHistory.length > 0) {
-                    userHistory.forEach(item => {
-                        const historyElement = document.createElement('div');
-                        historyElement.className = 'history-item';
-                        historyElement.innerHTML = `
-                            <p>${item.text}</p>
-                            <span class="history-date">${formatDateTime(item.timestamp)}</span>
-                        `;
-                        userHistoryList.appendChild(historyElement);
-                    });
-                } else {
-                    userHistoryList.innerHTML = '<p class="text-center">Ваша история пуста.</p>';
-                }
+                userHistory.forEach(item => {
+                    const historyItem = document.createElement('div');
+                    historyItem.className = 'history-item';
+                    historyItem.innerHTML = `
+                        <p class="mb-1">${item.text}</p>
+                        <p class="history-date">${new Date(item.timestamp).toLocaleString()}</p>
+                    `;
+                    userHistoryList.appendChild(historyItem);
+                });
             }
+            
+            // Full history (all actions)
+            history.forEach(item => {
+                const historyItem = document.createElement('div');
+                historyItem.className = 'history-item';
+                historyItem.innerHTML = `
+                    <p class="mb-1">${item.text}</p>
+                    <p class="history-date">${new Date(item.timestamp).toLocaleString()}</p>
+                `;
+                fullHistoryList.appendChild(historyItem);
+            });
         }
-        
-        async function createTask() {
-            const title = document.getElementById('taskTitle').value.trim();
-            const coins = document.getElementById('taskCoins').value;
-            
-            if (!title || !coins) {
-                alert('Пожалуйста, заполните все поля!');
-                return;
-            }
-            
-            const newTaskRef = firestore.collection('tasks').doc();
-            
-            const taskData = {
-                title: title,
-                coins: Number(coins),
-                creator: currentUser.name,
-                creationDate: new Date().toISOString()
-            };
-            
-            try {
-                await newTaskRef.set(taskData);
-                alert('Задание успешно создано!');
-                document.getElementById('taskTitle').value = '';
-                document.getElementById('taskCoins').value = '1';
-                loadTasks();
-                await addHistoryEntry(`Мама создала задание "${title}"`);
-            } catch (error) {
-                alert('Ошибка при создании задания.');
-                console.error('Ошибка:', error);
-            }
-        }
-        
-        async function createProduct() {
-            const title = document.getElementById('productTitle').value.trim();
-            const description = document.getElementById('productDescription').value.trim();
-            const price = document.getElementById('productPrice').value;
-            
-            if (!title || !description || !price) {
-                alert('Пожалуйста, заполните все поля!');
-                return;
-            }
-            
-            const newProductRef = firestore.collection('products').doc();
-            
-            const productData = {
-                title: title,
-                description: description,
-                price: Number(price),
-                creator: currentUser.name,
-                creationDate: new Date().toISOString()
-            };
-            
-            try {
-                await newProductRef.set(productData);
-                alert('Товар успешно добавлен!');
-                document.getElementById('productTitle').value = '';
-                document.getElementById('productDescription').value = '';
-                document.getElementById('productPrice').value = '5';
-                loadProducts();
-                await addHistoryEntry(`Мама добавила в магазин товар "${title}" за ${price} coins`);
-            } catch (error) {
-                alert('Ошибка при добавлении товара.');
-                console.error('Ошибка:', error);
-            }
-        }
-        
-        // ==================== НОВЫЕ ФУНКЦИИ ====================
 
         function setupChatListener() {
+            // Remove existing listener if any
             if (chatListener) {
-                return;
+                chatListener();
             }
-            const chatContainer = document.getElementById('chatContainer');
             
-            chatListener = firestore.collection('messages').orderBy('timestamp').limit(50).onSnapshot(snapshot => {
-                chatContainer.innerHTML = '';
-                snapshot.forEach(doc => {
-                    const message = doc.data();
-                    const messageElement = document.createElement('div');
-                    messageElement.className = `chat-message ${message.sender === currentUser.name ? 'sender' : 'recipient'}`;
-
-                    messageElement.textContent = message.content;
-                    
-                    const senderName = document.createElement('div');
-                    senderName.className = 'chat-message-info';
-                    senderName.textContent = `${message.sender} (${formatDateTime(message.timestamp)})`;
-                    messageElement.appendChild(senderName);
-                    
-                    chatContainer.appendChild(messageElement);
+            const chatContainer = document.getElementById('chatContainer');
+            chatContainer.innerHTML = '';
+            
+            // Subscribe to chat messages
+            chatListener = firestore.collection('chat')
+                .orderBy('timestamp', 'asc')
+                .onSnapshot(snapshot => {
+                    snapshot.docChanges().forEach(change => {
+                        if (change.type === 'added') {
+                            const message = change.doc.data();
+                            addMessageToChat(message);
+                        }
+                    });
+                }, error => {
+                    console.error('Ошибка загрузки чата:', error);
                 });
-                chatContainer.scrollTop = chatContainer.scrollHeight;
-            });
+        }
+
+        function addMessageToChat(message) {
+            const chatContainer = document.getElementById('chatContainer');
+            const messageElement = document.createElement('div');
+            
+            messageElement.className = `chat-message ${message.sender === currentUser.name ? 'sender' : 'recipient'}`;
+            messageElement.innerHTML = `
+                <div>${message.text}</div>
+                <div class="chat-message-info">
+                    ${message.sender} - ${new Date(message.timestamp).toLocaleTimeString()}
+                </div>
+                ${message.sender === currentUser.name ? `
+                    <span class="chat-delete-btn" onclick="deleteMessage('${message.id}')">
+                        <i class="fas fa-trash"></i>
+                    </span>
+                ` : ''}
+            `;
+            
+            chatContainer.appendChild(messageElement);
+            chatContainer.scrollTop = chatContainer.scrollHeight;
         }
 
         async function sendMessage() {
-            const chatInput = document.getElementById('chatMessageInput');
-            const message = chatInput.value.trim();
-
-            if (!message) return;
-
+            const messageInput = document.getElementById('chatMessageInput');
+            const messageText = messageInput.value.trim();
+            
+            if (!messageText) return;
+            
             try {
-                await firestore.collection('messages').add({
+                const timestamp = new Date().toISOString();
+                const messageData = {
                     sender: currentUser.name,
-                    content: message,
-                    timestamp: new Date().toISOString(),
+                    text: messageText,
+                    timestamp: timestamp
+                };
+                
+                // Add message to Firestore
+                const docRef = await firestore.collection('chat').add(messageData);
+                
+                // Update the message with ID for later deletion
+                await firestore.collection('chat').doc(docRef.id).update({
+                    id: docRef.id
                 });
-                chatInput.value = '';
+                
+                messageInput.value = '';
+                
             } catch (error) {
-                console.error('Error sending message:', error);
+                console.error('Ошибка отправки сообщения:', error);
+                alert('Не удалось отправить сообщение. Попробуйте еще раз.');
             }
         }
 
-        async function sendSticker(stickerEmoji) {
+        async function deleteMessage(messageId) {
             try {
-                await firestore.collection('messages').add({
-                    sender: currentUser.name,
-                    content: stickerEmoji,
-                    timestamp: new Date().toISOString(),
-                });
+                await deleteFromFirebase('chat', messageId);
             } catch (error) {
-                console.error('Error sending sticker:', error);
+                console.error('Ошибка удаления сообщения:', error);
+                alert('Не удалось удалить сообщение. Попробуйте еще раз.');
             }
         }
-        
-        async function updateProfileSection() {
+
+        function updateProfileSection() {
             if (!currentUser) return;
             
             const userData = users[currentUser.name];
             document.getElementById('profileName').textContent = currentUser.name;
             document.getElementById('profileType').textContent = currentUser.isMom ? 'Мама' : 'Ребенок';
-            document.getElementById('profileCoins').innerHTML = `<i class="fas fa-coins"></i> Баланс: <strong>${userData.coins}</strong> coins`;
-            document.getElementById('profileTasksCompleted').innerHTML = `<i class="fas fa-tasks"></i> Выполнено заданий: <strong>${userData.tasksCompleted}</strong>`;
             
-            // Заполняем список покупок
-            const purchasedProductsList = document.getElementById('purchasedProductsList');
-            purchasedProductsList.innerHTML = '';
-            if (userData.purchasedProducts.length > 0) {
-                userData.purchasedProducts.forEach(product => {
-                    const listItem = document.createElement('li');
-                    listItem.className = 'list-group-item';
-                    listItem.textContent = product;
-                    purchasedProductsList.appendChild(listItem);
-                });
+            if (currentUser.isMom) {
+                document.getElementById('profileCoins').innerHTML = `
+                    <span class="infinity-coins"><i class="fas fa-infinity"></i> Бесконечные coins</span>
+                `;
+                document.getElementById('transferCoinsSection').classList.remove('hidden');
+                document.getElementById('profileTasksCompleted').innerHTML = `
+                    Создано заданий: ${userData.tasksCreated || 0}<br>
+                    Подтверждено заданий: ${userData.tasksApproved || 0}
+                `;
             } else {
-                purchasedProductsList.innerHTML = '<li class="list-group-item text-center">У вас пока нет покупок.</li>';
+                document.getElementById('profileCoins').innerHTML = `
+                    <span class="coin-balance"><i class="fas fa-coins"></i> ${userData.coins} coins</span>
+                `;
+                document.getElementById('transferCoinsSection').classList.add('hidden');
+                document.getElementById('profileTasksCompleted').textContent = `Выполнено заданий: ${userData.tasksCompleted || 0}`;
             }
-
-            // Заполняем список получателей для перевода coins
-            const transferRecipientSelect = document.getElementById('transferRecipient');
-            transferRecipientSelect.innerHTML = '';
-            const otherUsers = Object.keys(users).filter(name => name !== currentUser.name);
-            if (otherUsers.length > 0) {
-                otherUsers.forEach(name => {
+            
+            // Update transfer recipient options
+            const recipientSelect = document.getElementById('transferRecipient');
+            recipientSelect.innerHTML = '';
+            
+            Object.entries(users).forEach(([name, data]) => {
+                if (name !== currentUser.name && data.type !== 'mom') {
                     const option = document.createElement('option');
                     option.value = name;
                     option.textContent = name;
-                    transferRecipientSelect.appendChild(option);
+                    recipientSelect.appendChild(option);
+                }
+            });
+            
+            // Update purchased products
+            const purchasedProductsList = document.getElementById('purchasedProductsList');
+            purchasedProductsList.innerHTML = '';
+            
+            if (userData.purchasedProducts && userData.purchasedProducts.length > 0) {
+                userData.purchasedProducts.forEach(product => {
+                    const listItem = document.createElement('li');
+                    listItem.className = 'list-group-item';
+                    listItem.textContent = `${product.title} (куплено: ${new Date(product.purchaseDate).toLocaleDateString()})`;
+                    purchasedProductsList.appendChild(listItem);
                 });
             } else {
-                const option = document.createElement('option');
-                option.textContent = 'Нет других пользователей';
-                option.disabled = true;
-                transferRecipientSelect.appendChild(option);
+                const listItem = document.createElement('li');
+                listItem.className = 'list-group-item text-center';
+                listItem.textContent = 'У вас пока нет покупок.';
+                purchasedProductsList.appendChild(listItem);
             }
         }
-        
-        async function transferCoins() {
-            const recipientName = document.getElementById('transferRecipient').value;
-            const amount = Number(document.getElementById('transferAmount').value);
+
+        function loadPendingApprovals() {
+            const approvalList = document.getElementById('approvalList');
+            approvalList.innerHTML = '';
             
-            if (!recipientName) {
-                alert('Пожалуйста, выберите получателя.');
-                return;
-            }
-            if (amount <= 0 || isNaN(amount)) {
-                alert('Пожалуйста, введите корректное количество coins.');
+            if (!currentUser.isMom || pendingApprovals.length === 0) {
+                approvalList.innerHTML = '<p class="text-center">Нет заданий для подтверждения</p>';
                 return;
             }
             
-            const senderData = users[currentUser.name];
-            const recipientData = users[recipientName];
-            
-            if (senderData.coins < amount) {
-                alert('Недостаточно coins для перевода!');
+            pendingApprovals.forEach(approval => {
+                const approvalItem = document.createElement('div');
+                approvalItem.className = 'card mb-3';
+                approvalItem.innerHTML = `
+                    <div class="card-body">
+                        <h5 class="card-title">${approval.taskTitle}</h5>
+                        <p class="card-text">Выполнил(а): ${approval.userName}</p>
+                        <p class="card-text">Награда: <span class="coin-balance"><i class="fas fa-coins"></i> ${approval.coins}</span></p>
+                        <div class="approval-buttons">
+                            <button class="btn btn-success" onclick="approveTask('${approval.id}')">
+                                <i class="fas fa-check"></i> Подтвердить
+                            </button>
+                            <button class="btn btn-danger" onclick="rejectTask('${approval.id}')">
+                                <i class="fas fa-times"></i> Отклонить
+                            </button>
+                        </div>
+                    </div>
+                `;
+                approvalList.appendChild(approvalItem);
+            });
+        }
+
+        async function completeTask(taskId) {
+            if (currentUser.isMom) {
+                alert('Только дети могут выполнять задания!');
                 return;
             }
             
-            senderData.coins -= amount;
-            recipientData.coins += amount;
+            const task = tasks[taskId];
+            if (!task) return;
             
             try {
-                const batch = firestore.batch();
-                const senderRef = firestore.collection('users').doc(currentUser.name);
-                const recipientRef = firestore.collection('users').doc(recipientName);
-
-                batch.set(senderRef, senderData);
-                batch.set(recipientRef, recipientData);
-
-                await batch.commit();
+                // Create a pending approval
+                const approvalId = `approval_${Date.now()}`;
+                const approvalData = {
+                    id: approvalId,
+                    taskId: taskId,
+                    taskTitle: task.title,
+                    userName: currentUser.name,
+                    coins: task.coins,
+                    timestamp: new Date().toISOString()
+                };
                 
-                await addHistoryEntry(`${currentUser.name} перевел(а) ${amount} coins пользователю ${recipientName}`);
-
-                users[currentUser.name] = senderData;
-                users[recipientName] = recipientData;
-
-                alert(`Перевод ${amount} coins для ${recipientName} успешен!`);
-                updateUI();
+                await saveApprovalToFirebase(approvalId, approvalData);
+                pendingApprovals.push(approvalData);
+                
+                await addHistoryEntry(`${currentUser.name} выполнил(а) задание "${task.title}" и ожидает подтверждения`);
+                
+                alert('Задание отправлено на подтверждение маме!');
                 
             } catch (error) {
-                alert('Ошибка при переводе coins.');
-                console.error('Ошибка:', error);
+                console.error('Ошибка выполнения задания:', error);
+                alert('Не удалось выполнить задание. Попробуйте еще раз.');
             }
         }
-        
+
+        async function approveTask(approvalId) {
+            if (!currentUser.isMom) {
+                alert('Только мама может подтверждать задания!');
+                return;
+            }
+            
+            const approval = pendingApprovals.find(a => a.id === approvalId);
+            if (!approval) return;
+            
+            try {
+                // Remove from pending approvals
+                await deleteFromFirebase('pendingApprovals', approvalId);
+                pendingApprovals = pendingApprovals.filter(a => a.id !== approvalId);
+                
+                // Update user's coins
+                const userData = users[approval.userName];
+                userData.coins += approval.coins;
+                userData.tasksCompleted = (userData.tasksCompleted || 0) + 1;
+                
+                await saveUserToFirebase(approval.userName, userData);
+                
+                // Update mom's stats
+                const momData = users[currentUser.name];
+                momData.tasksApproved = (momData.tasksApproved || 0) + 1;
+                await saveUserToFirebase(currentUser.name, momData);
+                
+                await addHistoryEntry(`Мама подтвердила выполнение задания "${approval.taskTitle}" для ${approval.userName}. Награда: ${approval.coins} coins`);
+                
+                // Update UI
+                updateUI();
+                loadPendingApprovals();
+                
+            } catch (error) {
+                console.error('Ошибка подтверждения задания:', error);
+                alert('Не удалось подтвердить задание. Попробуйте еще раз.');
+            }
+        }
+
+        async function rejectTask(approvalId) {
+            if (!currentUser.isMom) {
+                alert('Только мама может отклонять задания!');
+                return;
+            }
+            
+            const approval = pendingApprovals.find(a => a.id === approvalId);
+            if (!approval) return;
+            
+            try {
+                // Remove from pending approvals
+                await deleteFromFirebase('pendingApprovals', approvalId);
+                pendingApprovals = pendingApprovals.filter(a => a.id !== approvalId);
+                
+                await addHistoryEntry(`Мама отклонила выполнение задания "${approval.taskTitle}" для ${approval.userName}`);
+                
+                // Update UI
+                loadPendingApprovals();
+                
+            } catch (error) {
+                console.error('Ошибка отклонения задания:', error);
+                alert('Не удалось отклонить задание. Попробуйте еще раз.');
+            }
+        }
+
+        async function purchaseProduct(productId) {
+            if (currentUser.isMom) {
+                alert('Только дети могут покупать товары!');
+                return;
+            }
+            
+            const product = products[productId];
+            const userData = users[currentUser.name];
+            
+            if (!product) return;
+            
+            if (userData.coins < product.price) {
+                alert('Недостаточно coins для покупки!');
+                return;
+            }
+            
+            try {
+                // Deduct coins
+                userData.coins -= product.price;
+                
+                // Add to purchased products
+                if (!userData.purchasedProducts) {
+                    userData.purchasedProducts = [];
+                }
+                
+                userData.purchasedProducts.push({
+                    title: product.title,
+                    price: product.price,
+                    purchaseDate: new Date().toISOString()
+                });
+                
+                await saveUserToFirebase(currentUser.name, userData);
+                
+                await addHistoryEntry(`${currentUser.name} купил(а) "${product.title}" за ${product.price} coins`);
+                
+                // Update UI
+                updateUI();
+                
+                alert(`Вы успешно купили "${product.title}"!`);
+                
+            } catch (error) {
+                console.error('Ошибка покупки товара:', error);
+                alert('Не удалось купить товар. Попробуйте еще раз.');
+            }
+        }
+
+        async function transferCoins() {
+            if (!currentUser.isMom) {
+                alert('Только мама может переводить coins!');
+                return;
+            }
+            
+            const recipientName = document.getElementById('transferRecipient').value;
+            const amount = parseInt(document.getElementById('transferAmount').value);
+            
+            if (!recipientName) {
+                alert('Выберите получателя!');
+                return;
+            }
+            
+            if (isNaN(amount) || amount <= 0) {
+                alert('Введите корректную сумму!');
+                return;
+            }
+            
+            const recipientData = users[recipientName];
+            if (!recipientData) return;
+            
+            try {
+                // Add coins to recipient
+                recipientData.coins += amount;
+                await saveUserToFirebase(recipientName, recipientData);
+                
+                await addHistoryEntry(`Мама перевела ${amount} coins ${recipientName}`);
+                
+                // Update UI
+                updateUI();
+                
+                alert(`Вы успешно перевели ${amount} coins ${recipientName}!`);
+                
+            } catch (error) {
+                console.error('Ошибка перевода coins:', error);
+                alert('Не удалось перевести coins. Попробуйте еще раз.');
+            }
+        }
+
+        async function createTask() {
+            if (!currentUser.isMom) {
+                alert('Только мама может создавать задания!');
+                return;
+            }
+            
+            const title = document.getElementById('taskTitle').value.trim();
+            const coins = parseInt(document.getElementById('taskCoins').value);
+            
+            if (!title) {
+                alert('Введите название задания!');
+                return;
+            }
+            
+            if (isNaN(coins) || coins <= 0) {
+                alert('Введите корректное количество coins!');
+                return;
+            }
+            
+            try {
+                const taskId = `task_${Date.now()}`;
+                const taskData = {
+                    title: title,
+                    coins: coins,
+                    createdBy: currentUser.name,
+                    createdAt: new Date().toISOString()
+                };
+                
+                await saveTaskToFirebase(taskId, taskData);
+                tasks[taskId] = taskData;
+                
+                // Update mom's stats
+                const momData = users[currentUser.name];
+                momData.tasksCreated = (momData.tasksCreated || 0) + 1;
+                await saveUserToFirebase(currentUser.name, momData);
+                
+                await addHistoryEntry(`Мама создала новое задание: "${title}" с наградой ${coins} coins`);
+                
+                // Clear form and update UI
+                document.getElementById('taskTitle').value = '';
+                document.getElementById('taskCoins').value = '1';
+                
+                loadTasks();
+                
+                alert('Задание успешно создано!');
+                
+            } catch (error) {
+                console.error('Ошибка создания задания:', error);
+                alert('Не удалось создать задание. Попробуйте еще раз.');
+            }
+        }
+
+        async function createProduct() {
+            if (!currentUser.isMom) {
+                alert('Только мама может добавлять товары!');
+                return;
+            }
+            
+            const title = document.getElementById('productTitle').value.trim();
+            const description = document.getElementById('productDescription').value.trim();
+            const price = parseInt(document.getElementById('productPrice').value);
+            
+            if (!title) {
+                alert('Введите название товара!');
+                return;
+            }
+            
+            if (isNaN(price) || price <= 0) {
+                alert('Введите корректную цену!');
+                return;
+            }
+            
+            try {
+                const productId = `product_${Date.now()}`;
+                const productData = {
+                    title: title,
+                    description: description,
+                    price: price,
+                    createdBy: currentUser.name,
+                    createdAt: new Date().toISOString()
+                };
+                
+                await saveProductToFirebase(productId, productData);
+                products[productId] = productData;
+                
+                await addHistoryEntry(`Мама добавила новый товар в магазин: "${title}" за ${price} coins`);
+                
+                // Clear form and update UI
+                document.getElementById('productTitle').value = '';
+                document.getElementById('productDescription').value = '';
+                document.getElementById('productPrice').value = '5';
+                
+                loadProducts();
+                
+                alert('Товар успешно добавлен в магазин!');
+                
+            } catch (error) {
+                console.error('Ошибка добавления товара:', error);
+                alert('Не удалось добавить товар. Попробуйте еще раз.');
+            }
+        }
+
+        async function resetSettings() {
+            if (!currentUser.isMom) {
+                alert('Только мама может сбрасывать настройки!');
+                return;
+            }
+            
+            if (!confirm('Вы уверены, что хотите сбросить все настройки? Это действие нельзя отменить!')) {
+                return;
+            }
+            
+            try {
+                // Delete all collections
+                await deleteCollection('users');
+                await deleteCollection('tasks');
+                await deleteCollection('products');
+                await deleteCollection('history');
+                await deleteCollection('pendingApprovals');
+                await deleteCollection('chat');
+                
+                // Reset local data
+                users = {};
+                tasks = {};
+                products = {};
+                history = [];
+                pendingApprovals = [];
+                momExists = false;
+                
+                // Logout current user
+                currentUser = null;
+                localStorage.removeItem('currentUser');
+                
+                alert('Все данные были успешно сброшены!');
+                
+                // Reload the page
+                location.reload();
+                
+            } catch (error) {
+                console.error('Ошибка сброса настроек:', error);
+                alert('Не удалось сбросить настройки. Попробуйте еще раз.');
+            }
+        }
+
+        async function addHistoryEntry(text) {
+            const timestamp = new Date().toISOString();
+            const historyEntry = {
+                text: text,
+                timestamp: timestamp
+            };
+            
+            history.unshift(historyEntry);
+            
+            try {
+                await firestore.collection('history').add(historyEntry);
+            } catch (error) {
+                console.error('Ошибка сохранения истории:', error);
+            }
+        }
     </script>
 </body>
-</html>
+    </html>
