@@ -1,0 +1,1002 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Галяутдино-store</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-firestore-compat.js"></script>
+    <style>
+        :root {
+            --primary-color: #4e73df;
+            --secondary-color: #f8f9fc;
+            --arthur-color: #36b9cc;
+            --arina-color: #e74a3b;
+            --mom-color: #1cc88a;
+        }
+        body {
+            background-color: #f8f9fc;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            padding-bottom: 70px;
+        }
+        .navbar-brand {
+            font-weight: bold;
+            color: var(--primary-color) !important;
+            font-size: 1.5rem;
+        }
+        .coin-balance {
+            background-color: #ffc107;
+            color: #000;
+            padding: 5px 15px;
+            border-radius: 20px;
+            font-weight: bold;
+            display: inline-flex;
+            align-items: center;
+        }
+        .coin-balance i {
+            margin-right: 5px;
+        }
+        .card {
+            border-radius: 15px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            margin-bottom: 20px;
+            border: none;
+        }
+        .card-header {
+            border-radius: 15px 15px 0 0 !important;
+            font-weight: bold;
+        }
+        .task-card, .product-card {
+            transition: transform 0.3s;
+            position: relative;
+        }
+        .task-card:hover, .product-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 8px 15px rgba(0,0,0,0.1);
+        }
+        .section-title {
+            border-bottom: 3px solid var(--primary-color);
+            padding-bottom: 10px;
+            margin: 20px 0;
+            color: #333;
+        }
+        .hidden {
+            display: none;
+        }
+        .rating-card {
+            text-align: center;
+        }
+        .rating-avatar {
+            width: 100px;
+            height: 100px;
+            border-radius: 50%;
+            margin: 0 auto 15px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 2.5rem;
+            color: white;
+        }
+        .arthur-bg {
+            background-color: var(--arthur-color);
+        }
+        .arina-bg {
+            background-color: var(--arina-color);
+        }
+        .mom-bg {
+            background-color: var(--mom-color);
+        }
+        .progress {
+            height: 25px;
+            border-radius: 12px;
+            margin: 10px 0;
+        }
+        .btn-primary {
+            background-color: var(--primary-color);
+            border: none;
+            border-radius: 8px;
+            padding: 10px 20px;
+        }
+        .btn-primary:hover {
+            background-color: #3a5fc8;
+        }
+        .bottom-nav {
+            position: fixed;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            background-color: #fff;
+            box-shadow: 0 -2px 10px rgba(0,0,0,0.1);
+            z-index: 1000;
+        }
+        .nav-item {
+            text-align: center;
+            padding: 10px 0;
+        }
+        .nav-icon {
+            font-size: 1.5rem;
+            margin-bottom: 5px;
+        }
+        .nav-text {
+            font-size: 0.8rem;
+        }
+        .nav-link {
+            color: #6c757d;
+            text-decoration: none;
+        }
+        .nav-link.active {
+            color: var(--primary-color);
+        }
+        .welcome-container {
+            background: linear-gradient(135deg, #4e73df 0%, #224abe 100%);
+            color: white;
+            border-radius: 15px;
+            padding: 30px;
+            margin-top: 30px;
+        }
+        .feature-icon {
+            font-size: 3rem;
+            margin-bottom: 15px;
+            color: var(--primary-color);
+        }
+        .delete-btn {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            color: #dc3545;
+            cursor: pointer;
+        }
+        .coins-control {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            margin-top: 10px;
+        }
+        .coins-control button {
+            width: 30px;
+            height: 30px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        .infinity-coins {
+            background: linear-gradient(45deg, #ffc107, #ff6b35);
+            color: white;
+            padding: 5px 15px;
+            border-radius: 20px;
+            font-weight: bold;
+        }
+        .admin-panel {
+            background-color: #f8f9fa;
+            border-radius: 10px;
+            padding: 15px;
+            margin-bottom: 20px;
+        }
+        .history-item {
+            border-left: 4px solid #4e73df;
+            padding-left: 10px;
+            margin-bottom: 10px;
+        }
+        .history-date {
+            font-size: 0.8rem;
+            color: #6c757d;
+        }
+        .loading {
+            display: inline-block;
+            width: 20px;
+            height: 20px;
+            border: 3px solid #f3f3f3;
+            border-radius: 50%;
+            border-top: 3px solid #3498db;
+            animation: spin 1s linear infinite;
+        }
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        .firebase-status {
+            position: fixed;
+            top: 10px;
+            right: 10px;
+            padding: 5px 10px;
+            border-radius: 5px;
+            font-size: 12px;
+            z-index: 1000;
+        }
+        .status-connected {
+            background-color: #28a745;
+            color: white;
+        }
+        .status-disconnected {
+            background-color: #dc3545;
+            color: white;
+        }
+        .auth-error {
+            color: #dc3545;
+            text-align: center;
+            margin-top: 20px;
+        }
+    </style>
+</head>
+<body>
+    <div class="firebase-status status-disconnected" id="firebaseStatus">
+        <i class="fas fa-plug"></i> Firebase: Отключено
+    </div>
+
+    <nav class="navbar navbar-expand-lg navbar-dark bg-dark">
+        <div class="container">
+            <a class="navbar-brand" href="#">
+                <i class="fas fa-store me-2"></i>Галяутдино-store
+            </a>
+            <div class="d-flex align-items-center">
+                <span class="coin-balance me-3 hidden" id="headerCoins">
+                    <i class="fas fa-coins"></i> <span id="coinsValue">0</span> coins
+                </span>
+                <span class="infinity-coins me-3 hidden" id="infinityCoins">
+                    <i class="fas fa-infinity"></i> Бесконечные coins
+                </span>
+                <button class="btn btn-outline-light btn-sm hidden" id="loginButton" onclick="showAuth()">Войти</button>
+                <button class="btn btn-outline-light btn-sm hidden" id="logoutButton" onclick="logout()">Выйти</button>
+            </div>
+        </div>
+    </nav>
+
+    <div class="container mt-4">
+        <div id="welcomeSection">
+            <div class="welcome-container text-center">
+                <h1 class="display-4">Добро пожаловать в Галяутдино-store!</h1>
+                <p class="lead">Семейная система поощрений с coins, заданиями и магазином</p>
+                <div class="row mt-5">
+                    <div class="col-md-4">
+                        <i class="fas fa-tasks feature-icon"></i>
+                        <h3>Выполняйте задания</h3>
+                        <p>Получайте coins за выполнение домашних обязанностей</p>
+                    </div>
+                    <div class="col-md-4">
+                        <i class="fas fa-store feature-icon"></i>
+                        <h3>Покупайте товары</h3>
+                        <p>Тратьте coins на сладости и желания</p>
+                    </div>
+                    <div class="col-md-4">
+                        <i class="fas fa-trophy feature-icon"></i>
+                        <h3>Соревнуйтесь</h3>
+                        <p>Следите за рейтингом между участниками</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="auth-error hidden" id="authError">
+            <p>Ошибка подключения к Firebase. Пожалуйста, попробуйте позже.</p>
+        </div>
+
+        <div class="hidden" id="authSection">
+            <div class="row justify-content-center">
+                <div class="col-md-6">
+                    <div class="card">
+                        <div class="card-header bg-primary text-white">
+                            <h5 class="card-title text-center mb-0">Вход / Регистрация</h5>
+                        </div>
+                        <div class="card-body">
+                            <div class="mb-3" id="userTypeSection">
+                                <label for="userType" class="form-label">Выберите роль</label>
+                                <select class="form-select" id="userType">
+                                    <option value="child">Ребенок</option>
+                                </select>
+                            </div>
+                            <div class="mb-3">
+                                <label for="name" class="form-label">Имя</label>
+                                <input type="text" class="form-control" id="name" required>
+                            </div>
+                            <div class="mb-3">
+                                <label for="password" class="form-label">Пароль</label>
+                                <input type="password" class="form-control" id="password" required>
+                            </div>
+                            <div class="d-grid gap-2">
+                                <button type="button" class="btn btn-primary" onclick="login()">Войти</button>
+                                <button type="button" class="btn btn-outline-primary" onclick="register()">Зарегистрироваться</button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="hidden" id="ratingSection">
+            <h2 class="section-title">Семейный рейтинг</h2>
+            
+            <div class="admin-panel hidden" id="adminPanel">
+                <h4><i class="fas fa-cog"></i> Панель управления</h4>
+                <div class="row">
+                    <div class="col-md-12">
+                        <button class="btn btn-danger btn-sm" onclick="resetSettings()">
+                            <i class="fas fa-trash"></i> Сбросить все настройки
+                        </button>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="row" id="ratingList">
+                </div>
+        </div>
+
+        <div class="hidden" id="tasksSection">
+            <h2 class="section-title">Задания</h2>
+            
+            <div class="card mb-4 hidden" id="createTaskSection">
+                <div class="card-header bg-success text-white">
+                    <i class="fas fa-plus-circle"></i> Создать новое задание
+                </div>
+                <div class="card-body">
+                    <div class="mb-3">
+                        <label for="taskTitle" class="form-label">Название задания</label>
+                        <input type="text" class="form-control" id="taskTitle" placeholder="Например: Помыть посуду">
+                    </div>
+                    <div class="mb-3">
+                        <label for="taskCoins" class="form-label">Награда (coins)</label>
+                        <input type="number" class="form-control" id="taskCoins" value="1" min="1">
+                    </div>
+                    <button class="btn btn-success" onclick="createTask()">Создать задание</button>
+                </div>
+            </div>
+            
+            <div class="row" id="tasksList">
+                </div>
+            
+            <div class="card mt-4 hidden" id="approvalSection">
+                <div class="card-header bg-warning text-dark">
+                    <i class="fas fa-check-circle"></i> Задания на подтверждение
+                </div>
+                <div class="card-body" id="approvalList">
+                    <p class="text-center">Нет заданий для подтверждения</p>
+                </div>
+            </div>
+        </div>
+
+        <div class="hidden" id="shopSection">
+            <h2 class="section-title">Магазин</h2>
+            
+            <div class="card mb-4 hidden" id="createProductSection">
+                <div class="card-header bg-info text-white">
+                    <i class="fas fa-plus-circle"></i> Добавить новый товар
+                </div>
+                <div class="card-body">
+                    <div class="mb-3">
+                        <label for="productTitle" class="form-label">Название товара</label>
+                        <input type="text" class="form-control" id="productTitle" placeholder="Например: Мороженое">
+                    </div>
+                    <div class="mb-3">
+                        <label for="productDescription" class="form-label">Описание товара</label>
+                        <textarea class="form-control" id="productDescription" placeholder="Описание товара"></textarea>
+                    </div>
+                    <div class="mb-3">
+                        <label for="productPrice" class="form-label">Цена (coins)</label>
+                        <input type="number" class="form-control" id="productPrice" value="5" min="1">
+                    </div>
+                    <button class="btn btn-info" onclick="createProduct()">Добавить товар</button>
+                </div>
+            </div>
+            
+            <div class="row" id="productsList">
+                </div>
+        </div>
+
+        <div class="hidden" id="historySection">
+            <h2 class="section-title">История активности</h2>
+            
+            <div class="card hidden" id="fullHistorySection">
+                <div class="card-header bg-info text-white">
+                    <i class="fas fa-history"></i> Полная история семьи
+                </div>
+                <div class="card-body" id="fullHistoryList">
+                    </div>
+            </div>
+            
+            <div class="card" id="userHistorySection">
+                <div class="card-header bg-primary text-white">
+                    <i class="fas fa-user-clock"></i> Ваша история
+                </div>
+                <div class="card-body" id="userHistoryList">
+                    </div>
+            </div>
+        </div>
+    </div>
+
+    <nav class="bottom-nav hidden" id="bottomNav">
+        <div class="container">
+            <div class="row">
+                <div class="col nav-item">
+                    <a href="#" class="nav-link" onclick="showSection('rating')">
+                        <div class="nav-icon"><i class="fas fa-trophy"></i></div>
+                        <div class="nav-text">Рейтинг</div>
+                    </a>
+                </div>
+                <div class="col nav-item">
+                    <a href="#" class="nav-link" onclick="showSection('tasks')">
+                        <div class="nav-icon"><i class="fas fa-tasks"></i></div>
+                        <div class="nav-text">Задания</div>
+                    </a>
+                </div>
+                <div class="col nav-item">
+                    <a href="#" class="nav-link" onclick="showSection('shop')">
+                        <div class="nav-icon"><i class="fas fa-store"></i></div>
+                        <div class="nav-text">Магазин</div>
+                    </a>
+                </div>
+                <div class="col nav-item">
+                    <a href="#" class="nav-link" onclick="showSection('history')">
+                        <div class="nav-icon"><i class="fas fa-history"></i></div>
+                        <div class="nav-text">История</div>
+                    </a>
+                </div>
+                <div class="col nav-item">
+                    <a href="#" class="nav-link" onclick="showSection('profile')">
+                        <div class="nav-icon"><i class="fas fa-user"></i></div>
+                        <div class="nav-text">Профиль</div>
+                    </a>
+                </div>
+            </div>
+        </div>
+    </nav>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        // ==================== КОНФИГУРАЦИЯ FIREBASE ====================
+        const firebaseConfig = {
+            apiKey: "AIzaSyAoecYjm26nJmAzhFt1a1kPBfWVhvBvauE",
+            authDomain: "galyastore.firebaseapp.com",
+            databaseURL: "https://galyastore-default-rtdb.europe-west1.firebasedatabase.app",
+            projectId: "galyastore",
+            storageBucket: "galyastore.firebasestorage.app",
+            messagingSenderId: "897900393740",
+            appId: "1:897900393740:web:8eeb4e84c4d0d4acf94529"
+        };
+
+        // Инициализация Firebase
+        firebase.initializeApp(firebaseConfig);
+        const firestore = firebase.firestore();
+
+        // ==================== ПЕРЕМЕННЫЕ ====================
+        let currentUser = null;
+        let users = {};
+        let tasks = {};
+        let products = {};
+        let history = [];
+        let pendingApprovals = [];
+        let momExists = false;
+
+        // ==================== ИНИЦИАЛИЗАЦИЯ ====================
+        window.onload = async function() {
+            startConnectionProcess();
+        };
+
+        async function startConnectionProcess() {
+            document.getElementById('welcomeSection').innerHTML = `
+                <div class="text-center mt-5">
+                    <div class="loading"></div>
+                    <p>Подключение к Firebase...</p>
+                </div>
+            `;
+            document.getElementById('welcomeSection').classList.remove('hidden');
+            document.getElementById('authError').classList.add('hidden');
+            document.getElementById('loginButton').classList.add('hidden');
+            
+            // Запускаем процесс подключения с задержкой в 5 секунд
+            await new Promise(resolve => setTimeout(resolve, 5000));
+
+            try {
+                // Пытаемся подключиться
+                await checkFirebaseConnection();
+
+                // Если успешно, убираем ошибки и показываем главный экран
+                document.getElementById('authError').classList.add('hidden');
+                document.getElementById('welcomeSection').innerHTML = `
+                    <div class="welcome-container text-center">
+                        <h1 class="display-4">Добро пожаловать в Галяутдино-store!</h1>
+                        <p class="lead">Семейная система поощрений с coins, заданиями и магазином</p>
+                        <div class="row mt-5">
+                            <div class="col-md-4">
+                                <i class="fas fa-tasks feature-icon"></i>
+                                <h3>Выполняйте задания</h3>
+                                <p>Получайте coins за выполнение домашних обязанностей</p>
+                            </div>
+                            <div class="col-md-4">
+                                <i class="fas fa-store feature-icon"></i>
+                                <h3>Покупайте товары</h3>
+                                <p>Тратьте coins на сладости и желания</p>
+                            </div>
+                            <div class="col-md-4">
+                                <i class="fas fa-trophy feature-icon"></i>
+                                <h3>Соревнуйтесь</h3>
+                                <p>Следите за рейтингом между участниками</p>
+                            </div>
+                        </div>
+                    </div>
+                `;
+                document.getElementById('loginButton').classList.remove('hidden');
+                
+                await loadDataFromFirebase();
+                updateUserTypeOptions();
+                
+                const savedUser = localStorage.getItem('currentUser');
+                if (savedUser) {
+                    currentUser = JSON.parse(savedUser);
+                    updateUI();
+                    showSection('rating');
+                }
+
+            } catch (error) {
+                console.error('Ошибка при подключении:', error);
+                document.getElementById('authError').classList.remove('hidden');
+                document.getElementById('welcomeSection').classList.add('hidden');
+                document.getElementById('loginButton').classList.add('hidden');
+                
+                // Перезапускаем процесс через 5 секунд, чтобы повторить попытку
+                setTimeout(startConnectionProcess, 5000);
+            }
+        }
+
+        // ==================== FIREBASE ФУНКЦИИ ====================
+
+        async function checkFirebaseConnection() {
+            return new Promise((resolve, reject) => {
+                const testDocRef = firestore.collection('users').doc('connectionTest');
+                
+                testDocRef.get().then(() => {
+                    document.getElementById('firebaseStatus').className = 'firebase-status status-connected';
+                    document.getElementById('firebaseStatus').innerHTML = '<i class="fas fa-plug"></i> Firebase: Подключено';
+                    resolve(true);
+                }).catch(error => {
+                    document.getElementById('firebaseStatus').className = 'firebase-status status-disconnected';
+                    document.getElementById('firebaseStatus').innerHTML = '<i class="fas fa-plug"></i> Firebase: Отключено';
+                    reject(error);
+                });
+            });
+        }
+        
+        async function loadDataFromFirebase() {
+            try {
+                const usersSnapshot = await firestore.collection('users').get();
+                users = {};
+                usersSnapshot.forEach(doc => {
+                    users[doc.id] = doc.data();
+                });
+
+                const tasksSnapshot = await firestore.collection('tasks').get();
+                tasks = {};
+                tasksSnapshot.forEach(doc => {
+                    tasks[doc.id] = doc.data();
+                });
+
+                const productsSnapshot = await firestore.collection('products').get();
+                products = {};
+                productsSnapshot.forEach(doc => {
+                    products[doc.id] = doc.data();
+                });
+
+                const historySnapshot = await firestore.collection('history').orderBy('timestamp', 'desc').limit(100).get();
+                history = [];
+                historySnapshot.forEach(doc => {
+                    history.push(doc.data().text + '|' + doc.data().timestamp);
+                });
+
+                const approvalsSnapshot = await firestore.collection('pendingApprovals').get();
+                pendingApprovals = [];
+                approvalsSnapshot.forEach(doc => {
+                    pendingApprovals.push(doc.data());
+                });
+
+                momExists = Object.values(users).some(user => user && user.type === 'mom');
+            } catch (error) {
+                console.error('Ошибка загрузки данных из Firebase:', error);
+                throw error;
+            }
+        }
+
+        async function saveUserToFirebase(userId, userData) {
+            try {
+                await firestore.collection('users').doc(userId).set(userData);
+            } catch (error) {
+                console.error('Ошибка сохранения пользователя:', error);
+                throw error;
+            }
+        }
+
+        async function saveTaskToFirebase(taskId, taskData) {
+            try {
+                await firestore.collection('tasks').doc(taskId).set(taskData);
+            } catch (error) {
+                console.error('Ошибка сохранения задания:', error);
+                throw error;
+            }
+        }
+
+        async function saveProductToFirebase(productId, productData) {
+            try {
+                await firestore.collection('products').doc(productId).set(productData);
+            } catch (error) {
+                console.error('Ошибка сохранения товара:', error);
+                throw error;
+            }
+        }
+
+        async function addHistoryToFirebase(text, timestamp) {
+            try {
+                await firestore.collection('history').add({
+                    text: text,
+                    timestamp: timestamp
+                });
+            } catch (error) {
+                console.error('Ошибка сохранения истории:', error);
+                throw error;
+            }
+        }
+
+        async function saveApprovalToFirebase(approvalId, approvalData) {
+            try {
+                await firestore.collection('pendingApprovals').doc(approvalId).set(approvalData);
+            } catch (error) {
+                console.error('Ошибка сохранения approval:', error);
+                throw error;
+            }
+        }
+
+        async function deleteFromFirebase(collectionName, docId) {
+            try {
+                await firestore.collection(collectionName).doc(docId).delete();
+            } catch (error) {
+                console.error('Ошибка удаления:', error);
+                throw error;
+            }
+        }
+        
+        async function deleteCollection(collectionName) {
+            const batchSize = 100;
+            const collectionRef = firestore.collection(collectionName);
+            const query = collectionRef.limit(batchSize);
+
+            return new Promise((resolve, reject) => {
+                deleteQueryBatch(query, resolve).catch(reject);
+            });
+        }
+
+        async function deleteQueryBatch(query, resolve) {
+            const snapshot = await query.get();
+
+            if (snapshot.size === 0) {
+                resolve();
+                return;
+            }
+
+            const batch = firestore.batch();
+            snapshot.docs.forEach(doc => {
+                batch.delete(doc.ref);
+            });
+
+            await batch.commit();
+
+            setTimeout(() => {
+                deleteQueryBatch(query, resolve);
+            }, 10);
+        }
+
+        // ==================== ОСНОВНЫЕ ФУНКЦИИ ====================
+        
+        function showAuth() {
+            document.getElementById('welcomeSection').classList.add('hidden');
+            document.getElementById('authSection').classList.remove('hidden');
+        }
+
+        function updateUserTypeOptions() {
+            const userTypeSelect = document.getElementById('userType');
+            userTypeSelect.innerHTML = '';
+            
+            if (!momExists) {
+                const momOption = document.createElement('option');
+                momOption.value = 'mom';
+                momOption.textContent = 'Мама';
+                userTypeSelect.appendChild(momOption);
+            }
+            
+            const childOption = document.createElement('option');
+            childOption.value = 'child';
+            childOption.textContent = 'Ребенок';
+            userTypeSelect.appendChild(childOption);
+        }
+
+        async function register() {
+            const userType = document.getElementById('userType').value;
+            const name = document.getElementById('name').value.trim();
+            const password = document.getElementById('password').value;
+            
+            if (!name) {
+                alert('Пожалуйста, введите имя!');
+                return;
+            }
+            
+            if (!password) {
+                alert('Пожалуйста, введите пароль!');
+                return;
+            }
+            
+            if (users[name]) {
+                alert('Пользователь с таким именем уже существует!');
+                return;
+            }
+            
+            if (userType === 'mom' && momExists) {
+                alert('Мама уже зарегистрирована!');
+                return;
+            }
+            
+            const userData = {
+                password: password,
+                type: userType,
+                coins: 0,
+                tasksCompleted: 0,
+                purchasedProducts: [],
+                registrationDate: new Date().toISOString()
+            };
+            
+            if (userType === 'mom') {
+                userData.tasksCreated = 0;
+                userData.tasksApproved = 0;
+                momExists = true;
+            }
+            
+            try {
+                await saveUserToFirebase(name, userData);
+                
+                users[name] = userData;
+                
+                alert('Регистрация успешна! Теперь вы можете войти.');
+                updateUserTypeOptions();
+                
+                document.getElementById('name').value = '';
+                document.getElementById('password').value = '';
+                
+            } catch (error) {
+                alert('Ошибка регистрации. Попробуйте еще раз.');
+                console.error('Ошибка регистрации:', error);
+            }
+        }
+
+        async function login() {
+            const name = document.getElementById('name').value.trim();
+            const password = document.getElementById('password').value;
+            
+            if (!name) {
+                alert('Пожалуйста, введите имя!');
+                return;
+            }
+            
+            if (!password) {
+                alert('Пожалуйста, введите пароль!');
+                return;
+            }
+            
+            if (!users[name]) {
+                alert('Пользователь с таким именем не найден!');
+                return;
+            }
+            
+            if (users[name].password !== password) {
+                alert('Неверный пароль!');
+                return;
+            }
+            
+            currentUser = {
+                name: name,
+                type: users[name].type,
+                isMom: users[name].type === 'mom'
+            };
+            
+            localStorage.setItem('currentUser', JSON.stringify(currentUser));
+            
+            await addHistoryEntry(`${name} вошел(ла) в систему`);
+            
+            updateUI();
+            showSection('rating');
+        }
+
+        async function logout() {
+            if (currentUser) {
+                await addHistoryEntry(`${currentUser.name} вышел(ла) из системы`);
+            }
+            
+            currentUser = null;
+            localStorage.removeItem('currentUser');
+            updateUI();
+            showSection('welcome');
+        }
+
+        function updateUI() {
+            const isLoggedIn = currentUser !== null;
+            
+            document.getElementById('loginButton').classList.toggle('hidden', isLoggedIn);
+            document.getElementById('logoutButton').classList.toggle('hidden', !isLoggedIn);
+            document.getElementById('bottomNav').classList.toggle('hidden', !isLoggedIn);
+            
+            if (isLoggedIn) {
+                const userData = users[currentUser.name];
+                
+                if (!currentUser.isMom) {
+                    document.getElementById('headerCoins').classList.remove('hidden');
+                    document.getElementById('infinityCoins').classList.add('hidden');
+                    document.getElementById('coinsValue').textContent = userData.coins;
+                } else {
+                    document.getElementById('headerCoins').classList.add('hidden');
+                    document.getElementById('infinityCoins').classList.remove('hidden');
+                }
+                
+                document.getElementById('adminPanel').classList.toggle('hidden', !currentUser?.isMom);
+                document.getElementById('createTaskSection').classList.toggle('hidden', !currentUser.isMom);
+                document.getElementById('approvalSection').classList.toggle('hidden', !currentUser.isMom);
+                document.getElementById('fullHistorySection').classList.toggle('hidden', !currentUser.isMom);
+                document.getElementById('createProductSection').classList.toggle('hidden', !currentUser.isMom);
+                
+                updateRating();
+                loadTasks();
+                loadProducts();
+                loadHistory();
+            } else {
+                document.getElementById('headerCoins').classList.add('hidden');
+                document.getElementById('infinityCoins').classList.add('hidden');
+            }
+        }
+
+        function showSection(sectionName) {
+            document.getElementById('welcomeSection').classList.add('hidden');
+            document.getElementById('authSection').classList.add('hidden');
+            document.getElementById('ratingSection').classList.add('hidden');
+            document.getElementById('tasksSection').classList.add('hidden');
+            document.getElementById('shopSection').classList.add('hidden');
+            document.getElementById('historySection').classList.add('hidden');
+            
+            const selectedSection = document.getElementById(sectionName + 'Section');
+            if (selectedSection) {
+                selectedSection.classList.remove('hidden');
+            }
+
+            const navLinks = document.querySelectorAll('.bottom-nav .nav-link');
+            navLinks.forEach(link => {
+                link.classList.remove('active');
+            });
+
+            const activeLink = document.querySelector(`.bottom-nav .nav-link[onclick*="${sectionName}"]`);
+            if (activeLink) {
+                activeLink.classList.add('active');
+            }
+            
+            if (sectionName === 'rating') {
+                updateRating();
+            } else if (sectionName === 'tasks') {
+                loadTasks();
+            } else if (sectionName === 'shop') {
+                loadProducts();
+            } else if (sectionName === 'history') {
+                loadHistory();
+            }
+        }
+
+        function updateRating() {
+            const ratingList = document.getElementById('ratingList');
+            ratingList.innerHTML = '';
+            
+            const sortedUsers = Object.entries(users)
+                .filter(([name, data]) => data && data.type === 'child')
+                .sort((a, b) => b[1].coins - a[1].coins);
+            
+            sortedUsers.forEach(([name, data], index) => {
+                const medal = index === 0 ? '🥇' : index === 1 ? '🥈' : index === 2 ? '🥉' : '';
+                
+                const ratingElement = document.createElement('div');
+                ratingElement.className = 'col-md-6';
+                ratingElement.innerHTML = `
+                    <div class="card rating-card">
+                        <div class="card-body">
+                            <div class="rating-avatar bg-primary">
+                                <i class="fas fa-user"></i>
+                            </div>
+                            <h3>${name} ${medal}</h3>
+                            <h4 class="text-primary"><i class="fas fa-coins"></i> ${data.coins} coins</h4>
+                            ${currentUser?.isMom ? `
+                                <div class="coins-control">
+                                    <button class="btn btn-success btn-sm" onclick="changeCoins('${name}', 1)">+</button>
+                                    <button class="btn btn-danger btn-sm" onclick="changeCoins('${name}', -1)">-</button>
+                                    <button class="btn btn-warning btn-sm" onclick="changeCoins('${name}', 5)">+5</button>
+                                    <button class="btn btn-info btn-sm" onclick="changeCoins('${name}', -5)">-5</button>
+                                </div>
+                            ` : ''}
+                            <div class="progress">
+                                <div class="progress-bar bg-primary" role="progressbar" 
+                                    style="width: ${Math.min(data.coins, 100)}%"></div>
+                            </div>
+                            <p class="mt-3">Выполнено заданий: <strong>${data.tasksCompleted}</strong></p>
+                        </div>
+                    </div>
+                `;
+                ratingList.appendChild(ratingElement);
+            });
+        }
+
+        async function changeCoins(userName, amount) {
+            if (!currentUser || !currentUser.isMom) return;
+            
+            const user = users[userName];
+            if (!user) return;
+            
+            user.coins += amount;
+            if (user.coins < 0) user.coins = 0;
+            
+            try {
+                await saveUserToFirebase(userName, user);
+                
+                const action = amount > 0 ? 'добавила' : 'убрала';
+                await addHistoryEntry(`Мама ${action} ${Math.abs(amount)} coins для ${userName}`);
+                
+                updateRating();
+            } catch (error) {
+                alert('Ошибка изменения coins');
+                console.error('Ошибка:', error);
+            }
+        }
+
+        async function addHistoryEntry(text) {
+            const timestamp = new Date().toISOString();
+            const historyEntry = `${text}|${timestamp}`;
+            
+            history.unshift(historyEntry);
+            if (history.length > 100) history.pop();
+            
+            try {
+                await addHistoryToFirebase(text, timestamp);
+            } catch (error) {
+                console.error('Ошибка сохранения истории:', error);
+            }
+        }
+
+        async function resetSettings() {
+            if (!currentUser || !currentUser.isMom) return;
+            
+            if (!confirm('Вы уверены, что хотите сбросить все настройки? Это действие нельзя отменить!')) return;
+            
+            try {
+                await deleteCollection('tasks');
+                await deleteCollection('products');
+                await deleteCollection('history');
+                await deleteCollection('pendingApprovals');
+                
+                const usersRef = firestore.collection('users');
+                const usersSnapshot = await usersRef.where('type', '!=', 'mom').get();
+                const userBatch = firestore.batch();
+                usersSnapshot.forEach(doc => {
+                    userBatch.delete(doc.ref);
+                });
+                await userBatch.commit();
+                
+                alert('Все данные успешно сброшены!');
+                location.reload();
+                
+            } catch (error) {
+                console.error('Ошибка сброса настроек:', error);
+                alert('Ошибка при сбросе настроек.');
+            }
+        }
+
+        function formatDateTime(isoString) {
+            const date = new Date(isoString);
+            return `${date.toLocaleDateString()} ${date.toLocaleTimeString()}`;
+        }
+        
+        // Функции-заглушки, которые нужно будет реализовать
+        function loadTasks() {}
+        function loadProducts() {}
+        function loadHistory() {}
+        function createTask() {}
+        function createProduct() {}
+        
+    </script>
+</body>
+</html>
