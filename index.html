@@ -218,6 +218,56 @@
             text-align: center;
             margin-top: 20px;
         }
+        /* Chat styles */
+        .chat-container {
+            height: 60vh;
+            overflow-y: auto;
+            border: 1px solid #ddd;
+            border-radius: 10px;
+            padding: 15px;
+            margin-bottom: 10px;
+            display: flex;
+            flex-direction: column;
+        }
+        .chat-message {
+            margin-bottom: 10px;
+            padding: 8px 12px;
+            border-radius: 15px;
+            max-width: 80%;
+            word-wrap: break-word;
+        }
+        .chat-message.sender {
+            align-self: flex-end;
+            background-color: var(--primary-color);
+            color: white;
+        }
+        .chat-message.recipient {
+            align-self: flex-start;
+            background-color: #e9e9eb;
+            color: #333;
+        }
+        .chat-message-info {
+            font-size: 0.7rem;
+            color: #6c757d;
+            margin-top: 5px;
+        }
+        .chat-input-area {
+            display: flex;
+        }
+        .sticker-gallery {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(50px, 1fr));
+            gap: 10px;
+            margin-top: 10px;
+        }
+        .sticker-gallery img {
+            width: 100%;
+            cursor: pointer;
+            transition: transform 0.2s;
+        }
+        .sticker-gallery img:hover {
+            transform: scale(1.1);
+        }
     </style>
 </head>
 <body>
@@ -401,6 +451,63 @@
                     </div>
             </div>
         </div>
+
+        <div class="hidden" id="chatSection">
+            <h2 class="section-title">Чат семьи</h2>
+            <div class="card">
+                <div class="card-body">
+                    <div class="chat-container" id="chatContainer">
+                        </div>
+                    <div class="input-group">
+                        <input type="text" id="chatMessageInput" class="form-control" placeholder="Напишите сообщение...">
+                        <button class="btn btn-secondary dropdown-toggle" type="button" data-bs-toggle="dropdown" aria-expanded="false">
+                            <i class="far fa-laugh-beam"></i>
+                        </button>
+                        <ul class="dropdown-menu p-2 sticker-gallery">
+                            <li><img src="https://em-content.zobj.net/source/microsoft-teams/363/grinning-face_1f600.png" onclick="sendSticker('1f600')"></li>
+                            <li><img src="https://em-content.zobj.net/source/microsoft-teams/363/face-with-tears-of-joy_1f602.png" onclick="sendSticker('1f602')"></li>
+                            <li><img src="https://em-content.zobj.net/source/microsoft-teams/363/crying-face_1f622.png" onclick="sendSticker('1f622')"></li>
+                            <li><img src="https://em-content.zobj.net/source/microsoft-teams/363/thinking-face_1f914.png" onclick="sendSticker('1f914')"></li>
+                            <li><img src="https://em-content.zobj.net/source/microsoft-teams/363/partying-face_1f973.png" onclick="sendSticker('1f973')"></li>
+                            <li><img src="https://em-content.zobj.net/source/microsoft-teams/363/money-bag_1f4b0.png" onclick="sendSticker('1f4b0')"></li>
+                        </ul>
+                        <button class="btn btn-primary" onclick="sendMessage()">Отправить</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="hidden" id="profileSection">
+            <h2 class="section-title">Ваш профиль</h2>
+            <div class="card">
+                <div class="card-body">
+                    <h4 id="profileName"></h4>
+                    <p>Роль: <strong id="profileType"></strong></p>
+                    <p id="profileCoins"></p>
+                    <p id="profileTasksCompleted"></p>
+
+                    <div id="transferCoinsSection" class="mt-4 card p-3">
+                        <h5><i class="fas fa-exchange-alt"></i> Перевести coins</h5>
+                        <div class="mb-3">
+                            <label for="transferRecipient" class="form-label">Кому</label>
+                            <select class="form-select" id="transferRecipient"></select>
+                        </div>
+                        <div class="mb-3">
+                            <label for="transferAmount" class="form-label">Количество coins</label>
+                            <input type="number" class="form-control" id="transferAmount" min="1" value="1">
+                        </div>
+                        <button class="btn btn-primary" onclick="transferCoins()">Перевести</button>
+                    </div>
+
+                    <div id="purchasedProductsSection" class="mt-4">
+                        <h5><i class="fas fa-shopping-bag"></i> Ваши покупки</h5>
+                        <ul class="list-group" id="purchasedProductsList">
+                            <li class="list-group-item text-center">У вас пока нет покупок.</li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+        </div>
     </div>
 
     <nav class="bottom-nav hidden" id="bottomNav">
@@ -428,6 +535,12 @@
                     <a href="#" class="nav-link" onclick="showSection('history')">
                         <div class="nav-icon"><i class="fas fa-history"></i></div>
                         <div class="nav-text">История</div>
+                    </a>
+                </div>
+                <div class="col nav-item">
+                    <a href="#" class="nav-link" onclick="showSection('chat')">
+                        <div class="nav-icon"><i class="fas fa-comments"></i></div>
+                        <div class="nav-text">Чат</div>
                     </a>
                 </div>
                 <div class="col nav-item">
@@ -465,6 +578,7 @@
         let history = [];
         let pendingApprovals = [];
         let momExists = false;
+        let chatListener = null;
 
         // ==================== ИНИЦИАЛИЗАЦИЯ ====================
         window.onload = async function() {
@@ -808,6 +922,9 @@
             
             currentUser = null;
             localStorage.removeItem('currentUser');
+            if (chatListener) {
+                chatListener(); // Unsubscribe from chat updates
+            }
             updateUI();
             showSection('welcome');
         }
@@ -841,6 +958,8 @@
                 loadTasks();
                 loadProducts();
                 loadHistory();
+                setupChatListener();
+                updateProfileSection();
             } else {
                 document.getElementById('headerCoins').classList.add('hidden');
                 document.getElementById('infinityCoins').classList.add('hidden');
@@ -854,6 +973,14 @@
             document.getElementById('tasksSection').classList.add('hidden');
             document.getElementById('shopSection').classList.add('hidden');
             document.getElementById('historySection').classList.add('hidden');
+            document.getElementById('chatSection').classList.add('hidden');
+            document.getElementById('profileSection').classList.add('hidden');
+
+            // Unsubscribe from chat updates when leaving the chat section
+            if (chatListener) {
+                chatListener();
+                chatListener = null;
+            }
             
             const selectedSection = document.getElementById(sectionName + 'Section');
             if (selectedSection) {
@@ -878,6 +1005,10 @@
                 loadProducts();
             } else if (sectionName === 'history') {
                 loadHistory();
+            } else if (sectionName === 'chat') {
+                setupChatListener();
+            } else if (sectionName === 'profile') {
+                updateProfileSection();
             }
         }
 
@@ -966,6 +1097,7 @@
                 await deleteCollection('products');
                 await deleteCollection('history');
                 await deleteCollection('pendingApprovals');
+                await deleteCollection('messages');
                 
                 const usersRef = firestore.collection('users');
                 const usersSnapshot = await usersRef.where('type', '!=', 'mom').get();
@@ -1056,11 +1188,17 @@
             
             fullHistoryList.innerHTML = '';
             userHistoryList.innerHTML = '';
+
+            const historySnapshot = await firestore.collection('history').orderBy('timestamp', 'desc').limit(100).get();
+            const currentHistory = [];
+            historySnapshot.forEach(doc => {
+                currentHistory.push(doc.data());
+            });
             
             // Полная история
             if (currentUser?.isMom) {
-                if (history.length > 0) {
-                    history.forEach(item => {
+                if (currentHistory.length > 0) {
+                    currentHistory.forEach(item => {
                         const historyElement = document.createElement('div');
                         historyElement.className = 'history-item';
                         historyElement.innerHTML = `
@@ -1074,7 +1212,7 @@
                 }
             } else {
                 // История текущего пользователя
-                const userHistory = history.filter(item => item.text.includes(currentUser.name));
+                const userHistory = currentHistory.filter(item => item.text.includes(currentUser.name));
                 if (userHistory.length > 0) {
                     userHistory.forEach(item => {
                         const historyElement = document.createElement('div');
@@ -1152,6 +1290,160 @@
                 await addHistoryEntry(`Мама добавила в магазин товар "${title}" за ${price} coins`);
             } catch (error) {
                 alert('Ошибка при добавлении товара.');
+                console.error('Ошибка:', error);
+            }
+        }
+        
+        // ==================== НОВЫЕ ФУНКЦИИ ====================
+
+        function setupChatListener() {
+            if (chatListener) {
+                return;
+            }
+            const chatContainer = document.getElementById('chatContainer');
+            
+            chatListener = firestore.collection('messages').orderBy('timestamp').limit(50).onSnapshot(snapshot => {
+                chatContainer.innerHTML = '';
+                snapshot.forEach(doc => {
+                    const message = doc.data();
+                    const messageElement = document.createElement('div');
+                    messageElement.className = `chat-message ${message.sender === currentUser.name ? 'sender' : 'recipient'}`;
+
+                    if (message.type === 'sticker') {
+                        messageElement.innerHTML = `<img src="https://em-content.zobj.net/source/microsoft-teams/363/${message.content}.png" width="50">`;
+                    } else {
+                        messageElement.textContent = message.content;
+                    }
+                    
+                    const senderName = document.createElement('div');
+                    senderName.className = 'chat-message-info';
+                    senderName.textContent = `${message.sender} (${formatDateTime(message.timestamp)})`;
+                    messageElement.appendChild(senderName);
+                    
+                    chatContainer.appendChild(messageElement);
+                });
+                chatContainer.scrollTop = chatContainer.scrollHeight;
+            });
+        }
+
+        async function sendMessage() {
+            const chatInput = document.getElementById('chatMessageInput');
+            const message = chatInput.value.trim();
+
+            if (!message) return;
+
+            try {
+                await firestore.collection('messages').add({
+                    sender: currentUser.name,
+                    content: message,
+                    timestamp: new Date().toISOString(),
+                    type: 'text'
+                });
+                chatInput.value = '';
+            } catch (error) {
+                console.error('Error sending message:', error);
+            }
+        }
+
+        async function sendSticker(stickerCode) {
+            try {
+                await firestore.collection('messages').add({
+                    sender: currentUser.name,
+                    content: stickerCode,
+                    timestamp: new Date().toISOString(),
+                    type: 'sticker'
+                });
+            } catch (error) {
+                console.error('Error sending sticker:', error);
+            }
+        }
+        
+        async function updateProfileSection() {
+            if (!currentUser) return;
+            
+            const userData = users[currentUser.name];
+            document.getElementById('profileName').textContent = currentUser.name;
+            document.getElementById('profileType').textContent = currentUser.isMom ? 'Мама' : 'Ребенок';
+            document.getElementById('profileCoins').innerHTML = `<i class="fas fa-coins"></i> Баланс: <strong>${userData.coins}</strong> coins`;
+            document.getElementById('profileTasksCompleted').innerHTML = `<i class="fas fa-tasks"></i> Выполнено заданий: <strong>${userData.tasksCompleted}</strong>`;
+            
+            // Заполняем список покупок
+            const purchasedProductsList = document.getElementById('purchasedProductsList');
+            purchasedProductsList.innerHTML = '';
+            if (userData.purchasedProducts.length > 0) {
+                userData.purchasedProducts.forEach(product => {
+                    const listItem = document.createElement('li');
+                    listItem.className = 'list-group-item';
+                    listItem.textContent = product;
+                    purchasedProductsList.appendChild(listItem);
+                });
+            } else {
+                purchasedProductsList.innerHTML = '<li class="list-group-item text-center">У вас пока нет покупок.</li>';
+            }
+
+            // Заполняем список получателей для перевода coins
+            const transferRecipientSelect = document.getElementById('transferRecipient');
+            transferRecipientSelect.innerHTML = '';
+            const otherUsers = Object.keys(users).filter(name => name !== currentUser.name);
+            if (otherUsers.length > 0) {
+                otherUsers.forEach(name => {
+                    const option = document.createElement('option');
+                    option.value = name;
+                    option.textContent = name;
+                    transferRecipientSelect.appendChild(option);
+                });
+            } else {
+                const option = document.createElement('option');
+                option.textContent = 'Нет других пользователей';
+                option.disabled = true;
+                transferRecipientSelect.appendChild(option);
+            }
+        }
+        
+        async function transferCoins() {
+            const recipientName = document.getElementById('transferRecipient').value;
+            const amount = Number(document.getElementById('transferAmount').value);
+            
+            if (!recipientName) {
+                alert('Пожалуйста, выберите получателя.');
+                return;
+            }
+            if (amount <= 0 || isNaN(amount)) {
+                alert('Пожалуйста, введите корректное количество coins.');
+                return;
+            }
+            
+            const senderData = users[currentUser.name];
+            const recipientData = users[recipientName];
+            
+            if (senderData.coins < amount) {
+                alert('Недостаточно coins для перевода!');
+                return;
+            }
+            
+            senderData.coins -= amount;
+            recipientData.coins += amount;
+            
+            try {
+                const batch = firestore.batch();
+                const senderRef = firestore.collection('users').doc(currentUser.name);
+                const recipientRef = firestore.collection('users').doc(recipientName);
+
+                batch.set(senderRef, senderData);
+                batch.set(recipientRef, recipientData);
+
+                await batch.commit();
+                
+                await addHistoryEntry(`${currentUser.name} перевел(а) ${amount} coins пользователю ${recipientName}`);
+
+                users[currentUser.name] = senderData;
+                users[recipientName] = recipientData;
+
+                alert(`Перевод ${amount} coins для ${recipientName} успешен!`);
+                updateUI();
+                
+            } catch (error) {
+                alert('Ошибка при переводе coins.');
                 console.error('Ошибка:', error);
             }
         }
