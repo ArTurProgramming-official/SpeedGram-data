@@ -482,8 +482,8 @@
             document.getElementById('authError').classList.add('hidden');
             document.getElementById('loginButton').classList.add('hidden');
             
-            // Запускаем процесс подключения с задержкой в 5 секунд
-            await new Promise(resolve => setTimeout(resolve, 5000));
+            // Запускаем процесс подключения с задержкой в 2 секунды
+            await new Promise(resolve => setTimeout(resolve, 2000));
 
             try {
                 // Пытаемся подключиться
@@ -532,8 +532,8 @@
                 document.getElementById('welcomeSection').classList.add('hidden');
                 document.getElementById('loginButton').classList.add('hidden');
                 
-                // Перезапускаем процесс через 5 секунд, чтобы повторить попытку
-                setTimeout(startConnectionProcess, 5000);
+                // Перезапускаем процесс через 2 секунды, чтобы повторить попытку
+                setTimeout(startConnectionProcess, 2000);
             }
         }
 
@@ -578,7 +578,7 @@
                 const historySnapshot = await firestore.collection('history').orderBy('timestamp', 'desc').limit(100).get();
                 history = [];
                 historySnapshot.forEach(doc => {
-                    history.push(doc.data().text + '|' + doc.data().timestamp);
+                    history.push(doc.data());
                 });
 
                 const approvalsSnapshot = await firestore.collection('pendingApprovals').get();
@@ -621,8 +621,9 @@
             }
         }
 
-        async function addHistoryToFirebase(text, timestamp) {
+        async function addHistoryToFirebase(text) {
             try {
+                const timestamp = new Date().toISOString();
                 await firestore.collection('history').add({
                     text: text,
                     timestamp: timestamp
@@ -944,14 +945,12 @@
         }
 
         async function addHistoryEntry(text) {
-            const timestamp = new Date().toISOString();
-            const historyEntry = `${text}|${timestamp}`;
-            
-            history.unshift(historyEntry);
-            if (history.length > 100) history.pop();
-            
             try {
-                await addHistoryToFirebase(text, timestamp);
+                const timestamp = new Date().toISOString();
+                await firestore.collection('history').add({
+                    text: text,
+                    timestamp: timestamp
+                });
             } catch (error) {
                 console.error('Ошибка сохранения истории:', error);
             }
@@ -990,12 +989,172 @@
             return `${date.toLocaleDateString()} ${date.toLocaleTimeString()}`;
         }
         
-        // Функции-заглушки, которые нужно будет реализовать
-        function loadTasks() {}
-        function loadProducts() {}
-        function loadHistory() {}
-        function createTask() {}
-        function createProduct() {}
+        async function loadTasks() {
+            const tasksList = document.getElementById('tasksList');
+            tasksList.innerHTML = '';
+            
+            const tasksCollection = firestore.collection('tasks');
+            const tasksSnapshot = await tasksCollection.get();
+            
+            if (tasksSnapshot.empty) {
+                tasksList.innerHTML = '<p class="text-center">Нет доступных заданий.</p>';
+                return;
+            }
+            
+            tasksSnapshot.forEach(doc => {
+                const task = doc.data();
+                const taskId = doc.id;
+                
+                const taskCard = document.createElement('div');
+                taskCard.className = 'col-md-6';
+                taskCard.innerHTML = `
+                    <div class="card task-card">
+                        <div class="card-body">
+                            <h5 class="card-title">${task.title}</h5>
+                            <p class="card-text">Награда: <strong>${task.coins}</strong> coins</p>
+                        </div>
+                    </div>
+                `;
+                tasksList.appendChild(taskCard);
+            });
+        }
+        
+        async function loadProducts() {
+            const productsList = document.getElementById('productsList');
+            productsList.innerHTML = '';
+            
+            const productsCollection = firestore.collection('products');
+            const productsSnapshot = await productsCollection.get();
+            
+            if (productsSnapshot.empty) {
+                productsList.innerHTML = '<p class="text-center">Магазин пуст.</p>';
+                return;
+            }
+            
+            productsSnapshot.forEach(doc => {
+                const product = doc.data();
+                const productId = doc.id;
+                
+                const productCard = document.createElement('div');
+                productCard.className = 'col-md-6';
+                productCard.innerHTML = `
+                    <div class="card product-card">
+                        <div class="card-body">
+                            <h5 class="card-title">${product.title}</h5>
+                            <p class="card-text">${product.description}</p>
+                            <p class="card-text">Цена: <strong>${product.price}</strong> coins</p>
+                        </div>
+                    </div>
+                `;
+                productsList.appendChild(productCard);
+            });
+        }
+        
+        async function loadHistory() {
+            const fullHistoryList = document.getElementById('fullHistoryList');
+            const userHistoryList = document.getElementById('userHistoryList');
+            
+            fullHistoryList.innerHTML = '';
+            userHistoryList.innerHTML = '';
+            
+            // Полная история
+            if (currentUser?.isMom) {
+                if (history.length > 0) {
+                    history.forEach(item => {
+                        const historyElement = document.createElement('div');
+                        historyElement.className = 'history-item';
+                        historyElement.innerHTML = `
+                            <p>${item.text}</p>
+                            <span class="history-date">${formatDateTime(item.timestamp)}</span>
+                        `;
+                        fullHistoryList.appendChild(historyElement);
+                    });
+                } else {
+                    fullHistoryList.innerHTML = '<p class="text-center">История пуста.</p>';
+                }
+            } else {
+                // История текущего пользователя
+                const userHistory = history.filter(item => item.text.includes(currentUser.name));
+                if (userHistory.length > 0) {
+                    userHistory.forEach(item => {
+                        const historyElement = document.createElement('div');
+                        historyElement.className = 'history-item';
+                        historyElement.innerHTML = `
+                            <p>${item.text}</p>
+                            <span class="history-date">${formatDateTime(item.timestamp)}</span>
+                        `;
+                        userHistoryList.appendChild(historyElement);
+                    });
+                } else {
+                    userHistoryList.innerHTML = '<p class="text-center">Ваша история пуста.</p>';
+                }
+            }
+        }
+        
+        async function createTask() {
+            const title = document.getElementById('taskTitle').value.trim();
+            const coins = document.getElementById('taskCoins').value;
+            
+            if (!title || !coins) {
+                alert('Пожалуйста, заполните все поля!');
+                return;
+            }
+            
+            const newTaskRef = firestore.collection('tasks').doc();
+            
+            const taskData = {
+                title: title,
+                coins: Number(coins),
+                creator: currentUser.name,
+                creationDate: new Date().toISOString()
+            };
+            
+            try {
+                await newTaskRef.set(taskData);
+                alert('Задание успешно создано!');
+                document.getElementById('taskTitle').value = '';
+                document.getElementById('taskCoins').value = '1';
+                loadTasks();
+                await addHistoryEntry(`Мама создала задание "${title}"`);
+            } catch (error) {
+                alert('Ошибка при создании задания.');
+                console.error('Ошибка:', error);
+            }
+        }
+        
+        async function createProduct() {
+            const title = document.getElementById('productTitle').value.trim();
+            const description = document.getElementById('productDescription').value.trim();
+            const price = document.getElementById('productPrice').value;
+            
+            if (!title || !description || !price) {
+                alert('Пожалуйста, заполните все поля!');
+                return;
+            }
+            
+            const newProductRef = firestore.collection('products').doc();
+            
+            const productData = {
+                title: title,
+                description: description,
+                price: Number(price),
+                creator: currentUser.name,
+                creationDate: new Date().toISOString()
+            };
+            
+            try {
+                await newProductRef.set(productData);
+                alert('Товар успешно добавлен!');
+                document.getElementById('productTitle').value = '';
+                document.getElementById('productDescription').value = '';
+                document.getElementById('productPrice').value = '5';
+                loadProducts();
+                await addHistoryEntry(`Мама добавила в магазин товар "${title}" за ${price} coins`);
+            } catch (error) {
+                alert('Ошибка при добавлении товара.');
+                console.error('Ошибка:', error);
+            }
+        }
         
     </script>
 </body>
