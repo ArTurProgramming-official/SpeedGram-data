@@ -1,2 +1,1694 @@
-сайт плохо работает, я отключил его.
-выключу когда починю
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Галяутдино-store</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-firestore-compat.js"></script>
+    <style>
+        :root {
+            --primary-color: #4e73df;
+            --secondary-color: #f8f9fc;
+            --arthur-color: #36b9cc;
+            --arina-color: #e74a3b;
+            --mom-color: #1cc88a;
+        }
+        body {
+            background-color: #f8f9fc;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            padding-bottom: 70px;
+        }
+        .navbar-brand {
+            font-weight: bold;
+            color: var(--primary-color) !important;
+            font-size: 1.5rem;
+        }
+        .coin-balance {
+            background-color: #ffc107;
+            color: #000;
+            padding: 5px 15px;
+            border-radius: 20px;
+            font-weight: bold;
+            display: inline-flex;
+            align-items: center;
+        }
+        .coin-balance i {
+            margin-right: 5px;
+        }
+        .card {
+            border-radius: 15px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            margin-bottom: 20px;
+            border: none;
+        }
+        .card-header {
+            border-radius: 15px 15px 0 0 !important;
+            font-weight: bold;
+        }
+        .task-card, .product-card {
+            transition: transform 0.3s;
+            position: relative;
+        }
+        .task-card:hover, .product-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 8px 15px rgba(0,0,0,0.1);
+        }
+        .section-title {
+            border-bottom: 3px solid var(--primary-color);
+            padding-bottom: 10px;
+            margin: 20px 0;
+            color: #333;
+        }
+        .hidden {
+            display: none;
+        }
+        .rating-card {
+            text-align: center;
+        }
+        .rating-avatar {
+            width: 100px;
+            height: 100px;
+            border-radius: 50%;
+            margin: 0 auto 15px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 2.5rem;
+            color: white;
+        }
+        .arthur-bg {
+            background-color: var(--arthur-color);
+        }
+        .arina-bg {
+            background-color: var(--arina-color);
+        }
+        .mom-bg {
+            background-color: var(--mom-color);
+        }
+        .progress {
+            height: 25px;
+            border-radius: 12px;
+            margin: 10px 0;
+        }
+        .btn-primary {
+            background-color: var(--primary-color);
+            border: none;
+            border-radius: 8px;
+            padding: 10px 20px;
+        }
+        .btn-primary:hover {
+            background-color: #3a5fc8;
+        }
+        .bottom-nav {
+            position: fixed;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            background-color: #fff;
+            box-shadow: 0 -2px 10px rgba(0,0,0,0.1);
+            z-index: 1000;
+        }
+        .nav-item {
+            text-align: center;
+            padding: 10px 0;
+        }
+        .nav-icon {
+            font-size: 1.5rem;
+            margin-bottom: 5px;
+        }
+        .nav-text {
+            font-size: 0.8rem;
+        }
+        .nav-link {
+            color: #6c757d;
+            text-decoration: none;
+        }
+        .nav-link.active {
+            color: var(--primary-color);
+        }
+        .welcome-container {
+            background: linear-gradient(135deg, #4e73df 0%, #224abe 100%);
+            color: white;
+            border-radius: 15px;
+            padding: 30px;
+            margin-top: 30px;
+        }
+        .feature-icon {
+            font-size: 3rem;
+            margin-bottom: 15px;
+            color: var(--primary-color);
+        }
+        .delete-btn {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            color: #dc3545;
+            cursor: pointer;
+        }
+        .coins-control {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            margin-top: 10px;
+        }
+        .coins-control button {
+            width: 30px;
+            height: 30px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        .infinity-coins {
+            background: linear-gradient(45deg, #ffc107, #ff6b35);
+            color: white;
+            padding: 5px 15px;
+            border-radius: 20px;
+            font-weight: bold;
+        }
+        .admin-panel {
+            background-color: #f8f9fa;
+            border-radius: 10px;
+            padding: 15px;
+            margin-bottom: 20px;
+        }
+        .history-item {
+            border-left: 4px solid #4e73df;
+            padding-left: 10px;
+            margin-bottom: 10px;
+        }
+        .history-date {
+            font-size: 0.8rem;
+            color: #6c757d;
+        }
+        .loading {
+            display: inline-block;
+            width: 20px;
+            height: 20px;
+            border: 3px solid #f3f3f3;
+            border-radius: 50%;
+            border-top: 3px solid #3498db;
+            animation: spin 1s linear infinite;
+        }
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        .firebase-status {
+            position: fixed;
+            top: 10px;
+            right: 10px;
+            padding: 5px 10px;
+            border-radius: 5px;
+            font-size: 12px;
+            z-index: 1000;
+        }
+        .status-connected {
+            background-color: #28a745;
+            color: white;
+        }
+        .status-disconnected {
+            background-color: #dc3545;
+            color: white;
+        }
+        .auth-error {
+            color: #dc3545;
+            text-align: center;
+            margin-top: 20px;
+        }
+        /* Chat styles */
+        .chat-container {
+            height: 60vh;
+            overflow-y: auto;
+            border: 1px solid #ddd;
+            border-radius: 10px;
+            padding: 15px;
+            margin-bottom: 10px;
+            display: flex;
+            flex-direction: column;
+        }
+        .chat-message {
+            margin-bottom: 10px;
+            padding: 8px 12px;
+            border-radius: 15px;
+            max-width: 80%;
+            word-wrap: break-word;
+            line-height: 1.4;
+            position: relative;
+        }
+        .chat-message.sender {
+            align-self: flex-end;
+            background-color: var(--primary-color);
+            color: white;
+        }
+        .chat-message.recipient {
+            align-self: flex-start;
+            background-color: #e9e9eb;
+            color: #333;
+        }
+        .chat-message-info {
+            font-size: 0.7rem;
+            color: #6c757d;
+            margin-top: 5px;
+        }
+        .chat-delete-btn {
+            position: absolute;
+            top: 5px;
+            right: 5px;
+            font-size: 0.7rem;
+            color: #dc3545;
+            cursor: pointer;
+            opacity: 0.5;
+            transition: opacity 0.3s;
+        }
+        .chat-message:hover .chat-delete-btn {
+            opacity: 1;
+        }
+        .chat-input-area {
+            display: flex;
+        }
+        .task-complete-btn {
+            margin-top: 10px;
+        }
+        .approval-buttons {
+            display: flex;
+            gap: 10px;
+            margin-top: 10px;
+        }
+        .purchase-btn {
+            margin-top: 10px;
+        }
+        .pending-approval {
+            background-color: #ffc107;
+            color: #000;
+            padding: 5px 10px;
+            border-radius: 5px;
+            font-size: 0.9rem;
+            margin-top: 10px;
+            display: inline-block;
+        }
+        .insufficient-funds {
+            background-color: #dc3545;
+            color: white;
+            padding: 5px 10px;
+            border-radius: 5px;
+            font-size: 0.9rem;
+            margin-top: 10px;
+            display: inline-block;
+        }
+    </style>
+</head>
+<body>
+    <div class="firebase-status status-disconnected" id="firebaseStatus">
+        <i class="fas fa-plug"></i> Firebase: Отключено
+    </div>
+
+    <nav class="navbar navbar-expand-lg navbar-dark bg-dark">
+        <div class="container">
+            <a class="navbar-brand" href="#">
+                <i class="fas fa-store me-2"></i>Галяутдино-store
+            </a>
+            <div class="d-flex align-items-center">
+                <span class="coin-balance me-3 hidden" id="headerCoins">
+                    <i class="fas fa-coins"></i> <span id="coinsValue">0</span> coins
+                </span>
+                <span class="infinity-coins me-3 hidden" id="infinityCoins">
+                    <i class="fas fa-infinity"></i> Бесконечные coins
+                </span>
+                <button class="btn btn-outline-light btn-sm hidden" id="loginButton" onclick="showAuth()">Войти</button>
+                <button class="btn btn-outline-light btn-sm hidden" id="logoutButton" onclick="logout()">Выйти</button>
+            </div>
+        </div>
+    </nav>
+
+    <div class="container mt-4">
+        <div id="welcomeSection">
+            <div class="welcome-container text-center">
+                <h1 class="display-4">Добро пожаловать в Галяутдино-store!</h1>
+                <p class="lead">Семейная система поощрений с coins, заданиями и магазином</p>
+                <div class="row mt-5">
+                    <div class="col-md-4">
+                        <i class="fas fa-tasks feature-icon"></i>
+                        <h3>Выполняйте задания</h3>
+                        <p>Получайте coins за выполнение домашних обязанностей</p>
+                    </div>
+                    <div class="col-md-4">
+                        <i class="fas fa-store feature-icon"></i>
+                        <h3>Покупайте товары</h3>
+                        <p>Тратьте coins на сладости и желания</p>
+                    </div>
+                    <div class="col-md-4">
+                        <i class="fas fa-trophy feature-icon"></i>
+                        <h3>Соревнуйтесь</h3>
+                        <p>Следите за рейтингом между участниками</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="auth-error hidden" id="authError">
+            <p>Ошибка подключения к Firebase. Пожалуйста, попробуйте позже.</p>
+        </div>
+
+        <div class="hidden" id="authSection">
+            <div class="row justify-content-center">
+                <div class="col-md-6">
+                    <div class="card">
+                        <div class="card-header bg-primary text-white">
+                            <h5 class="card-title text-center mb-0">Вход / Регистрация</h5>
+                        </div>
+                        <div class="card-body">
+                            <div class="mb-3" id="userTypeSection">
+                                <label for="userType" class="form-label">Выберите роль</label>
+                                <select class="form-select" id="userType">
+                                    <option value="child">Ребенок</option>
+                                </select>
+                            </div>
+                            <div class="mb-3">
+                                <label for="name" class="form-label">Имя</label>
+                                <input type="text" class="form-control" id="name" required>
+                            </div>
+                            <div class="mb-3">
+                                <label for="password" class="form-label">Пароль</label>
+                                <input type="password" class="form-control" id="password" required>
+                            </div>
+                            <div class="d-grid gap-2">
+                                <button type="button" class="btn btn-primary" onclick="login()">Войти</button>
+                                <button type="button" class="btn btn-outline-primary" onclick="register()">Зарегистрироваться</button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="hidden" id="ratingSection">
+            <h2 class="section-title">Семейный рейтинг</h2>
+            
+            <div class="admin-panel hidden" id="adminPanel">
+                <h4><i class="fas fa-cog"></i> Панель управления</h4>
+                <div class="row">
+                    <div class="col-md-12">
+                        <button class="btn btn-danger btn-sm" onclick="resetSettings()">
+                            <i class="fas fa-trash"></i> Сбросить все настройки
+                        </button>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="row" id="ratingList">
+                </div>
+        </div>
+
+        <div class="hidden" id="tasksSection">
+            <h2 class="section-title">Задания</h2>
+            
+            <div class="card mb-4 hidden" id="createTaskSection">
+                <div class="card-header bg-success text-white">
+                    <i class="fas fa-plus-circle"></i> Создать новое задание
+                </div>
+                <div class="card-body">
+                    <div class="mb-3">
+                        <label for="taskTitle" class="form-label">Название задания</label>
+                        <input type="text" class="form-control" id="taskTitle" placeholder="Например: Помыть посуду">
+                    </div>
+                    <div class="mb-3">
+                        <label for="taskCoins" class="form-label">Награда (coins)</label>
+                        <input type="number" class="form-control" id="taskCoins" value="1" min="1">
+                    </div>
+                    <button class="btn btn-success" onclick="createTask()">Создать задание</button>
+                </div>
+            </div>
+            
+            <div class="row" id="tasksList">
+                </div>
+            
+            <div class="card mt-4 hidden" id="approvalSection">
+                <div class="card-header bg-warning text-dark">
+                    <i class="fas fa-check-circle"></i> Задания на подтверждение
+                </div>
+                <div class="card-body" id="approvalList">
+                    <p class="text-center">Нет заданий для подтверждения</p>
+                </div>
+            </div>
+        </div>
+
+        <div class="hidden" id="shopSection">
+            <h2 class="section-title">Магазин</h2>
+            
+            <div class="card mb-4 hidden" id="createProductSection">
+                <div class="card-header bg-info text-white">
+                    <i class="fas fa-plus-circle"></i> Добавить новый товар
+                </div>
+                <div class="card-body">
+                    <div class="mb-3">
+                        <label for="productTitle" class="form-label">Название товара</label>
+                        <input type="text" class="form-control" id="productTitle" placeholder="Например: Мороженое">
+                    </div>
+                    <div class="mb-3">
+                        <label for="productDescription" class="form-label">Описание товара</label>
+                        <textarea class="form-control" id="productDescription" placeholder="Описание товара"></textarea>
+                    </div>
+                    <div class="mb-3">
+                        <label for="productPrice" class="form-label">Цена (coins)</label>
+                        <input type="number" class="form-control" id="productPrice" value="5" min="1">
+                    </div>
+                    <button class="btn btn-info" onclick="createProduct()">Добавить товар</button>
+                </div>
+            </div>
+            
+            <div class="row" id="productsList">
+                </div>
+        </div>
+
+        <div class="hidden" id="historySection">
+            <h2 class="section-title">История активности</h2>
+            
+            <div class="card hidden" id="fullHistorySection">
+                <div class="card-header bg-info text-white">
+                    <i class="fas fa-history"></i> Полная история семьи
+                </div>
+                <div class="card-body" id="fullHistoryList">
+                    </div>
+            </div>
+            
+            <div class="card" id="userHistorySection">
+                <div class="card-header bg-primary text-white">
+                    <i class="fas fa-user-clock"></i> Ваша история
+                </div>
+                <div class="card-body" id="userHistoryList">
+                    </div>
+            </div>
+        </div>
+
+        <div class="hidden" id="chatSection">
+            <h2 class="section-title">Чат семьи</h2>
+            <div class="card">
+                <div class="card-body">
+                    <div class="chat-container" id="chatContainer">
+                        </div>
+                    <div class="input-group">
+                        <input type="text" id="chatMessageInput" class="form-control" placeholder="Напишите сообщение...">
+                        <button class="btn btn-primary" onclick="sendMessage()">Отправить</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="hidden" id="profileSection">
+            <h2 class="section-title">Ваш профиль</h2>
+            <div class="card">
+                <div class="card-body">
+                    <h4 id="profileName"></h4>
+                    <p>Роль: <strong id="profileType"></strong></p>
+                    <p id="profileCoins"></p>
+                    <p id="profileTasksCompleted"></p>
+
+                    <div id="transferCoinsSection" class="mt-4 card p-3">
+                        <h5><i class="fas fa-exchange-alt"></i> Перевести coins</h5>
+                        <div class="mb-3">
+                            <label for="transferRecipient" class="form-label">Кому</label>
+                            <select class="form-select" id="transferRecipient"></select>
+                        </div>
+                        <div class="mb-3">
+                            <label for="transferAmount" class="form-label">Количество coins</label>
+                            <input type="number" class="form-control" id="transferAmount" min="1" value="1">
+                        </div>
+                        <button class="btn btn-primary" onclick="transferCoins()">Перевести</button>
+                    </div>
+
+                    <div id="purchasedProductsSection" class="mt-4">
+                        <h5><i class="fas fa-shopping-bag"></i> Ваши покупки</h5>
+                        <ul class="list-group" id="purchasedProductsList">
+                            <li class="list-group-item text-center">У вас пока нет покупок.</li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <nav class="bottom-nav hidden" id="bottomNav">
+        <div class="container">
+            <div class="row">
+                <div class="col nav-item">
+                    <a href="#" class="nav-link" onclick="showSection('rating')">
+                        <div class="nav-icon"><i class="fas fa-trophy"></i></div>
+                        <div class="nav-text">Рейтинг</div>
+                    </a>
+                </div>
+                <div class="col nav-item">
+                    <a href="#" class="nav-link" onclick="showSection('tasks')">
+                        <div class="nav-icon"><i class="fas fa-tasks"></i></div>
+                        <div class="nav-text">Задания</div>
+                    </a>
+                </div>
+                <div class="col nav-item">
+                    <a href="#" class="nav-link" onclick="showSection('shop')">
+                        <div class="nav-icon"><i class="fas fa-store"></i></div>
+                        <div class="nav-text">Магазин</div>
+                    </a>
+                </div>
+                <div class="col nav-item">
+                    <a href="#" class="nav-link" onclick="showSection('history')">
+                        <div class="nav-icon"><i class="fas fa-history"></i></div>
+                        <div class="nav-text">История</div>
+                    </a>
+                </div>
+                <div class="col nav-item">
+                    <a href="#" class="nav-link" onclick="showSection('chat')">
+                        <div class="nav-icon"><i class="fas fa-comments"></i></div>
+                        <div class="nav-text">Чат</div>
+                    </a>
+                </div>
+                <div class="col nav-item">
+                    <a href="#" class="nav-link" onclick="showSection('profile')">
+                        <div class="nav-icon"><i class="fas fa-user"></i></div>
+                        <div class="nav-text">Профиль</div>
+                    </a>
+                </div>
+            </div>
+        </div>
+    </nav>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        // ==================== КОНФИГУРАЦИЯ FIREBASE ====================
+        const firebaseConfig = {
+            apiKey: "AIzaSyAoecYjm26nJmAzhFt1a1kPBfWVhvBvauE",
+            authDomain: "galyastore.firebaseapp.com",
+            databaseURL: "https://galyastore-default-rtdb.europe-west1.firebasedatabase.app",
+            projectId: "galyastore",
+            storageBucket: "galyastore.firebasestorage.app",
+            messagingSenderId: "897900393740",
+            appId: "1:897900393740:web:8eeb4e84c4d0d4acf94529"
+        };
+
+        // Инициализация Firebase
+        firebase.initializeApp(firebaseConfig);
+        const firestore = firebase.firestore();
+
+        // ==================== ПЕРЕМЕННЫЕ ====================
+        let currentUser = null;
+        let users = {};
+        let tasks = {};
+        let products = {};
+        let history = [];
+        let pendingApprovals = [];
+        let momExists = false;
+        let chatListener = null;
+        let userPendingTasks = {};
+
+        // ==================== ИНИЦИАЛИЗАЦИЯ ====================
+        window.onload = async function() {
+            startConnectionProcess();
+        };
+
+        async function startConnectionProcess() {
+            document.getElementById('welcomeSection').innerHTML = `
+                <div class="text-center mt-5">
+                    <div class="loading"></div>
+                    <p>Подключение к Firebase...</p>
+                </div>
+            `;
+            document.getElementById('welcomeSection').classList.remove('hidden');
+            document.getElementById('authError').classList.add('hidden');
+            document.getElementById('loginButton').classList.add('hidden');
+            
+            // Запускаем процесс подключения с задержкой в 2 секунды
+            await new Promise(resolve => setTimeout(resolve, 2000));
+
+            try {
+                // Пытаемся подключиться
+                await checkFirebaseConnection();
+
+                // Если успешно, убираем ошибки и показываем главный экран
+                document.getElementById('authError').classList.add('hidden');
+                document.getElementById('welcomeSection').innerHTML = `
+                    <div class="welcome-container text-center">
+                        <h1 class="display-4">Добро пожаловать в Галяутдино-store!</h1>
+                        <p class="lead">Семейная система поощрений с coins, заданиями и магазином</p>
+                        <div class="row mt-5">
+                            <div class="col-md-4">
+                                <i class="fas fa-tasks feature-icon"></i>
+                                <h3>Выполняйте задания</h3>
+                                <p>Получайте coins за выполнение домашних обязанностей</p>
+                            </div>
+                            <div class="col-md-4">
+                                <i class="fas fa-store feature-icon"></i>
+                                <h3>Покупайте товары</h3>
+                                <p>Тратьте coins на сладости и желания</p>
+                            </div>
+                            <div class="col-md-4">
+                                <i class="fas fa-trophy feature-icon"></i>
+                                <h3>Соревнуйтесь</h3>
+                                <p>Следите за рейтингом между участников</p>
+                            </div>
+                        </div>
+                    </div>
+                `;
+                document.getElementById('loginButton').classList.remove('hidden');
+                
+                await loadDataFromFirebase();
+                updateUserTypeOptions();
+                
+                const savedUser = localStorage.getItem('currentUser');
+                if (savedUser) {
+                    currentUser = JSON.parse(savedUser);
+                    updateUI();
+                    showSection('rating');
+                }
+
+            } catch (error) {
+                console.error('Ошибка при подключении:', error);
+                document.getElementById('authError').classList.remove('hidden');
+                document.getElementById('welcomeSection').classList.add('hidden');
+                document.getElementById('loginButton').classList.add('hidden');
+                
+                // Перезапускаем процесс через 2 секунды, чтобы повторить попытку
+                setTimeout(startConnectionProcess, 2000);
+            }
+        }
+
+        // ==================== FIREBASE ФУНКЦИИ ====================
+
+        async function checkFirebaseConnection() {
+            return new Promise((resolve, reject) => {
+                const testDocRef = firestore.collection('users').doc('connectionTest');
+                
+                testDocRef.get().then(() => {
+                    document.getElementById('firebaseStatus').className = 'firebase-status status-connected';
+                    document.getElementById('firebaseStatus').innerHTML = '<i class="fas fa-plug"></i> Firebase: Подключено';
+                    resolve(true);
+                }).catch(error => {
+                    document.getElementById('firebaseStatus').className = 'firebase-status status-disconnected';
+                    document.getElementById('firebaseStatus').innerHTML = '<i class="fas fa-plug"></i> Firebase: Отключено';
+                    reject(error);
+                });
+            });
+        }
+        
+        async function loadDataFromFirebase() {
+            try {
+                const usersSnapshot = await firestore.collection('users').get();
+                users = {};
+                usersSnapshot.forEach(doc => {
+                    users[doc.id] = doc.data();
+                });
+
+                const tasksSnapshot = await firestore.collection('tasks').get();
+                tasks = {};
+                tasksSnapshot.forEach(doc => {
+                    tasks[doc.id] = doc.data();
+                });
+
+                const productsSnapshot = await firestore.collection('products').get();
+                products = {};
+                productsSnapshot.forEach(doc => {
+                    products[doc.id] = doc.data();
+                });
+
+                const historySnapshot = await firestore.collection('history').orderBy('timestamp', 'desc').limit(100).get();
+                history = [];
+                historySnapshot.forEach(doc => {
+                    history.push(doc.data());
+                });
+
+                const approvalsSnapshot = await firestore.collection('pendingApprovals').get();
+                pendingApprovals = [];
+                approvalsSnapshot.forEach(doc => {
+                    pendingApprovals.push(doc.data());
+                });
+
+                // Загружаем задачи на подтверждение для текущего пользователя
+                userPendingTasks = {};
+                if (currentUser && !currentUser.isMom) {
+                    const userApprovals = pendingApprovals.filter(approval => approval.userName === currentUser.name);
+                    userApprovals.forEach(approval => {
+                        userPendingTasks[approval.taskId] = true;
+                    });
+                }
+
+                momExists = Object.values(users).some(user => user && user.type === 'mom');
+            } catch (error) {
+                console.error('Ошибка загрузки данных из Firebase:', error);
+                throw error;
+            }
+        }
+
+        async function saveUserToFirebase(userId, userData) {
+            try {
+                await firestore.collection('users').doc(userId).set(userData);
+            } catch (error) {
+                console.error('Ошибка сохранения пользователя:', error);
+                throw error;
+            }
+        }
+
+        async function saveTaskToFirebase(taskId, taskData) {
+            try {
+                await firestore.collection('tasks').doc(taskId).set(taskData);
+            } catch (error) {
+                console.error('Ошибка сохранения задания:', error);
+                throw error;
+            }
+        }
+
+        async function saveProductToFirebase(productId, productData) {
+            try {
+                await firestore.collection('products').doc(productId).set(productData);
+            } catch (error) {
+                console.error('Ошибка сохранения товара:', error);
+                throw error;
+            }
+        }
+
+        async function addHistoryToFirebase(text) {
+            try {
+                const timestamp = new Date().toISOString();
+                await firestore.collection('history').add({
+                    text: text,
+                    timestamp: timestamp
+                });
+            } catch (error) {
+                console.error('Ошибка сохранения истории:', error);
+                throw error;
+            }
+        }
+
+        async function saveApprovalToFirebase(approvalId, approvalData) {
+            try {
+                await firestore.collection('pendingApprovals').doc(approvalId).set(approvalData);
+            } catch (error) {
+                console.error('Ошибка сохранения approval:', error);
+                throw error;
+            }
+        }
+
+        async function deleteFromFirebase(collectionName, docId) {
+            try {
+                await firestore.collection(collectionName).doc(docId).delete();
+            } catch (error) {
+                console.error('Ошибка удаления:', error);
+                throw error;
+            }
+        }
+        
+        async function deleteCollection(collectionName) {
+            const batchSize = 100;
+            const collectionRef = firestore.collection(collectionName);
+            const query = collectionRef.limit(batchSize);
+
+            return new Promise((resolve, reject) => {
+                deleteQueryBatch(query, resolve).catch(reject);
+            });
+        }
+
+        async function deleteQueryBatch(query, resolve) {
+            const snapshot = await query.get();
+
+            if (snapshot.size === 0) {
+                resolve();
+                return;
+            }
+
+            const batch = firestore.batch();
+            snapshot.docs.forEach(doc => {
+                batch.delete(doc.ref);
+            });
+
+            await batch.commit();
+
+            setTimeout(() => {
+                deleteQueryBatch(query, resolve);
+            }, 10);
+        }
+
+        // ==================== ОСНОВНЫЕ ФУНКЦИИ ====================
+        
+        function showAuth() {
+            document.getElementById('welcomeSection').classList.add('hidden');
+            document.getElementById('authSection').classList.remove('hidden');
+        }
+
+        function updateUserTypeOptions() {
+            const userTypeSelect = document.getElementById('userType');
+            userTypeSelect.innerHTML = '';
+            
+            if (!momExists) {
+                const momOption = document.createElement('option');
+                momOption.value = 'mom';
+                momOption.textContent = 'Мама';
+                userTypeSelect.appendChild(momOption);
+            }
+            
+            const childOption = document.createElement('option');
+            childOption.value = 'child';
+            childOption.textContent = 'Ребенок';
+            userTypeSelect.appendChild(childOption);
+        }
+
+        async function register() {
+            const userType = document.getElementById('userType').value;
+            const name = document.getElementById('name').value.trim();
+            const password = document.getElementById('password').value;
+            
+            if (!name) {
+                alert('Пожалуйста, введите имя!');
+                return;
+            }
+            
+            if (!password) {
+                alert('Пожалуйста, введите пароль!');
+                return;
+            }
+            
+            if (users[name]) {
+                alert('Пользователь с таким именем уже существует!');
+                return;
+            }
+            
+            if (userType === 'mom' && momExists) {
+                alert('Мама уже зарегистрирована!');
+                return;
+            }
+            
+            const userData = {
+                password: password,
+                type: userType,
+                coins: 0,
+                tasksCompleted: 0,
+                purchasedProducts: [],
+                registrationDate: new Date().toISOString()
+            };
+            
+            if (userType === 'mom') {
+                userData.tasksCreated = 0;
+                userData.tasksApproved = 0;
+                momExists = true;
+            }
+            
+            try {
+                await saveUserToFirebase(name, userData);
+                
+                users[name] = userData;
+                
+                alert('Регистрация успешна! Теперь вы можете войти.');
+                updateUserTypeOptions();
+                
+                document.getElementById('name').value = '';
+                document.getElementById('password').value = '';
+                
+            } catch (error) {
+                alert('Ошибка регистрации. Попробуйте еще раз.');
+                console.error('Ошибка регистрации:', error);
+            }
+        }
+
+        async function login() {
+            const name = document.getElementById('name').value.trim();
+            const password = document.getElementById('password').value;
+            
+            if (!name) {
+                alert('Пожалуйста, введите имя!');
+                return;
+            }
+            
+            if (!password) {
+                alert('Пожалуйста, введите пароль!');
+                return;
+            }
+            
+            if (!users[name]) {
+                alert('Пользователь с таким именем не найден!');
+                return;
+            }
+            
+            if (users[name].password !== password) {
+                alert('Неверный пароль!');
+                return;
+            }
+            
+            currentUser = {
+                name: name,
+                type: users[name].type,
+                isMom: users[name].type === 'mom'
+            };
+            
+            localStorage.setItem('currentUser', JSON.stringify(currentUser));
+            
+            await addHistoryEntry(`${name} вошел(ла) в систему`);
+            
+            updateUI();
+            showSection('rating');
+        }
+
+        async function logout() {
+            if (currentUser) {
+                await addHistoryEntry(`${currentUser.name} вышел(ла) из системы`);
+            }
+            
+            currentUser = null;
+            localStorage.removeItem('currentUser');
+            if (chatListener) {
+                chatListener(); // Unsubscribe from chat updates
+            }
+            updateUI();
+            showSection('welcome');
+        }
+
+        function updateUI() {
+            const isLoggedIn = currentUser !== null;
+            
+            document.getElementById('loginButton').classList.toggle('hidden', isLoggedIn);
+            document.getElementById('logoutButton').classList.toggle('hidden', !isLoggedIn);
+            document.getElementById('bottomNav').classList.toggle('hidden', !isLoggedIn);
+            
+            if (isLoggedIn) {
+                const userData = users[currentUser.name];
+                
+                if (!currentUser.isMom) {
+                    document.getElementById('headerCoins').classList.remove('hidden');
+                    document.getElementById('infinityCoins').classList.add('hidden');
+                    document.getElementById('coinsValue').textContent = userData.coins;
+                } else {
+                    document.getElementById('headerCoins').classList.add('hidden');
+                    document.getElementById('infinityCoins').classList.remove('hidden');
+                }
+                
+                document.getElementById('adminPanel').classList.toggle('hidden', !currentUser?.isMom);
+                document.getElementById('createTaskSection').classList.toggle('hidden', !currentUser.isMom);
+                document.getElementById('approvalSection').classList.toggle('hidden', !currentUser.isMom);
+                document.getElementById('fullHistorySection').classList.toggle('hidden', !currentUser.isMom);
+                document.getElementById('createProductSection').classList.toggle('hidden', !currentUser.isMom);
+                
+                updateRating();
+                loadTasks();
+                loadProducts();
+                loadHistory();
+                setupChatListener();
+                updateProfileSection();
+                loadPendingApprovals();
+            } else {
+                document.getElementById('headerCoins').classList.add('hidden');
+                document.getElementById('infinityCoins').classList.add('hidden');
+            }
+        }
+
+        function showSection(sectionName) {
+            document.getElementById('welcomeSection').classList.add('hidden');
+            document.getElementById('authSection').classList.add('hidden');
+            document.getElementById('ratingSection').classList.add('hidden');
+            document.getElementById('tasksSection').classList.add('hidden');
+            document.getElementById('shopSection').classList.add('hidden');
+            document.getElementById('historySection').classList.add('hidden');
+            document.getElementById('chatSection').classList.add('hidden');
+            document.getElementById('profileSection').classList.add('hidden');
+            
+            if (sectionName === 'welcome') {
+                document.getElementById('welcomeSection').classList.remove('hidden');
+            } else if (sectionName === 'auth') {
+                document.getElementById('authSection').classList.remove('hidden');
+            } else {
+                document.getElementById(sectionName + 'Section').classList.remove('hidden');
+            }
+        }
+
+        function updateRating() {
+            const ratingList = document.getElementById('ratingList');
+            ratingList.innerHTML = '';
+            
+            const sortedUsers = Object.entries(users)
+                .filter(([name, data]) => data && data.type !== 'mom')
+                .sort((a, b) => b[1].coins - a[1].coins);
+            
+            sortedUsers.forEach(([name, data], index) => {
+                const rank = index + 1;
+                const progress = Math.min(100, (data.coins / 100) * 100);
+                
+                const card = document.createElement('div');
+                card.className = 'col-md-6 col-lg-4 mb-4';
+                card.innerHTML = `
+                    <div class="card rating-card">
+                        <div class="card-body">
+                            <div class="rating-avatar ${name === 'Arthur' ? 'arthur-bg' : 'arina-bg'}">
+                                <i class="fas fa-user"></i>
+                            </div>
+                            <h5 class="card-title">${name}</h5>
+                            <p class="card-text">
+                                <span class="coin-balance">
+                                    <i class="fas fa-coins"></i> ${data.coins} coins
+                                </span>
+                            </p>
+                            <div class="progress">
+                                <div class="progress-bar ${name === 'Arthur' ? 'bg-info' : 'bg-danger'}" 
+                                     role="progressbar" style="width: ${progress}%"></div>
+                            </div>
+                            <p class="small">Выполнено заданий: ${data.tasksCompleted || 0}</p>
+                            <p class="small">Место в рейтинге: ${rank}</p>
+                        </div>
+                    </div>
+                `;
+                ratingList.appendChild(card);
+            });
+        }
+
+        function loadTasks() {
+            const tasksList = document.getElementById('tasksList');
+            tasksList.innerHTML = '';
+            
+            Object.entries(tasks).forEach(([taskId, task]) => {
+                const isPending = userPendingTasks[taskId];
+                
+                const card = document.createElement('div');
+                card.className = 'col-md-6 col-lg-4 mb-4';
+                card.innerHTML = `
+                    <div class="card task-card">
+                        <div class="card-body">
+                            <h5 class="card-title">${task.title}</h5>
+                            <p class="card-text">Награда: <span class="coin-balance"><i class="fas fa-coins"></i> ${task.coins}</span></p>
+                            ${!currentUser.isMom ? `
+                                ${isPending ? 
+                                    '<div class="pending-approval"><i class="fas fa-clock"></i> На подтверждении</div>' : 
+                                    `<button class="btn btn-primary task-complete-btn" onclick="completeTask('${taskId}')">
+                                        <i class="fas fa-check"></i> Выполнил(а)
+                                    </button>`
+                                }
+                            ` : ''}
+                        </div>
+                    </div>
+                `;
+                tasksList.appendChild(card);
+            });
+        }
+
+        function loadProducts() {
+            const productsList = document.getElementById('productsList');
+            productsList.innerHTML = '';
+            
+            Object.entries(products).forEach(([productId, product]) => {
+                const userData = users[currentUser.name];
+                const canBuy = !currentUser.isMom && userData.coins >= product.price;
+                
+                const card = document.createElement('div');
+                card.className = 'col-md-6 col-lg-4 mb-4';
+                card.innerHTML = `
+                    <div class="card product-card">
+                        <div class="card-body">
+                            <h5 class="card-title">${product.title}</h5>
+                            <p class="card-text">${product.description || ''}</p>
+                            <p class="card-text">Цена: <span class="coin-balance"><i class="fas fa-coins"></i> ${product.price}</span></p>
+                            ${!currentUser.isMom ? `
+                                ${canBuy ? 
+                                    `<button class="btn btn-primary purchase-btn" onclick="purchaseProduct('${productId}')">
+                                        <i class="fas fa-shopping-cart"></i> Купить
+                                    </button>` : 
+                                    `<div class="insufficient-funds">
+                                        <i class="fas fa-exclamation-triangle"></i> Недостаточно coins
+                                    </div>`
+                                }
+                            ` : ''}
+                        </div>
+                    </div>
+                `;
+                productsList.appendChild(card);
+            });
+        }
+
+        function loadHistory() {
+            const userHistoryList = document.getElementById('userHistoryList');
+            const fullHistoryList = document.getElementById('fullHistoryList');
+            
+            userHistoryList.innerHTML = '';
+            fullHistoryList.innerHTML = '';
+            
+            if (history.length === 0) {
+                userHistoryList.innerHTML = '<p class="text-center">История пуста.</p>';
+                fullHistoryList.innerHTML = '<p class="text-center">История пуста.</p>';
+                return;
+            }
+            
+            // User history (only current user's actions)
+            const userHistory = history.filter(item => 
+                item.text.includes(currentUser.name) || 
+                (item.text.includes('купил') && item.text.includes(currentUser.name)) ||
+                (item.text.includes('перевел') && item.text.includes(currentUser.name))
+            );
+            
+            if (userHistory.length === 0) {
+                userHistoryList.innerHTML = '<p class="text-center">Ваша история пуста.</p>';
+            } else {
+                userHistory.forEach(item => {
+                    const historyItem = document.createElement('div');
+                    historyItem.className = 'history-item';
+                    historyItem.innerHTML = `
+                        <p class="mb-1">${item.text}</p>
+                        <p class="history-date">${new Date(item.timestamp).toLocaleString()}</p>
+                    `;
+                    userHistoryList.appendChild(historyItem);
+                });
+            }
+            
+            // Full history (all actions)
+            history.forEach(item => {
+                const historyItem = document.createElement('div');
+                historyItem.className = 'history-item';
+                historyItem.innerHTML = `
+                    <p class="mb-1">${item.text}</p>
+                    <p class="history-date">${new Date(item.timestamp).toLocaleString()}</p>
+                `;
+                fullHistoryList.appendChild(historyItem);
+            });
+        }
+
+        function setupChatListener() {
+            // Remove existing listener if any
+            if (chatListener) {
+                chatListener();
+            }
+            
+            const chatContainer = document.getElementById('chatContainer');
+            chatContainer.innerHTML = '';
+            
+            // Subscribe to chat messages
+            chatListener = firestore.collection('chat')
+                .orderBy('timestamp', 'asc')
+                .onSnapshot(snapshot => {
+                    snapshot.docChanges().forEach(change => {
+                        if (change.type === 'added') {
+                            const message = change.doc.data();
+                            addMessageToChat(message);
+                        }
+                    });
+                }, error => {
+                    console.error('Ошибка загрузки чата:', error);
+                });
+        }
+
+        function addMessageToChat(message) {
+            const chatContainer = document.getElementById('chatContainer');
+            const messageElement = document.createElement('div');
+            
+            messageElement.className = `chat-message ${message.sender === currentUser.name ? 'sender' : 'recipient'}`;
+            messageElement.innerHTML = `
+                <div>${message.text}</div>
+                <div class="chat-message-info">
+                    ${message.sender} - ${new Date(message.timestamp).toLocaleTimeString()}
+                </div>
+                ${message.sender === currentUser.name ? `
+                    <span class="chat-delete-btn" onclick="deleteMessage('${message.id}')">
+                        <i class="fas fa-trash"></i>
+                    </span>
+                ` : ''}
+            `;
+            
+            chatContainer.appendChild(messageElement);
+            chatContainer.scrollTop = chatContainer.scrollHeight;
+        }
+
+        async function sendMessage() {
+            const messageInput = document.getElementById('chatMessageInput');
+            const messageText = messageInput.value.trim();
+            
+            if (!messageText) return;
+            
+            try {
+                const timestamp = new Date().toISOString();
+                const messageData = {
+                    sender: currentUser.name,
+                    text: messageText,
+                    timestamp: timestamp
+                };
+                
+                // Add message to Firestore
+                const docRef = await firestore.collection('chat').add(messageData);
+                
+                // Update the message with ID for later deletion
+                await firestore.collection('chat').doc(docRef.id).update({
+                    id: docRef.id
+                });
+                
+                messageInput.value = '';
+                
+            } catch (error) {
+                console.error('Ошибка отправки сообщения:', error);
+                alert('Не удалось отправить сообщение. Попробуйте еще раз.');
+            }
+        }
+
+        async function deleteMessage(messageId) {
+            try {
+                await deleteFromFirebase('chat', messageId);
+            } catch (error) {
+                console.error('Ошибка удаления сообщения:', error);
+                alert('Не удалось удалить сообщение. Попробуйте еще раз.');
+            }
+        }
+
+        function updateProfileSection() {
+            if (!currentUser) return;
+            
+            const userData = users[currentUser.name];
+            document.getElementById('profileName').textContent = currentUser.name;
+            document.getElementById('profileType').textContent = currentUser.isMom ? 'Мама' : 'Ребенок';
+            
+            if (currentUser.isMom) {
+                document.getElementById('profileCoins').innerHTML = `
+                    <span class="infinity-coins"><i class="fas fa-infinity"></i> Бесконечные coins</span>
+                `;
+                document.getElementById('transferCoinsSection').classList.remove('hidden');
+                document.getElementById('profileTasksCompleted').innerHTML = `
+                    Создано заданий: ${userData.tasksCreated || 0}<br>
+                    Подтверждено заданий: ${userData.tasksApproved || 0}
+                `;
+            } else {
+                document.getElementById('profileCoins').innerHTML = `
+                    <span class="coin-balance"><i class="fas fa-coins"></i> ${userData.coins} coins</span>
+                `;
+                document.getElementById('transferCoinsSection').classList.remove('hidden');
+                document.getElementById('profileTasksCompleted').textContent = `Выполнено заданий: ${userData.tasksCompleted || 0}`;
+            }
+            
+            // Update transfer recipient options
+            const recipientSelect = document.getElementById('transferRecipient');
+            recipientSelect.innerHTML = '';
+            
+            Object.entries(users).forEach(([name, data]) => {
+                if (name !== currentUser.name && data.type !== 'mom') {
+                    const option = document.createElement('option');
+                    option.value = name;
+                    option.textContent = name;
+                    recipientSelect.appendChild(option);
+                }
+            });
+            
+            // Update purchased products
+            const purchasedProductsList = document.getElementById('purchasedProductsList');
+            purchasedProductsList.innerHTML = '';
+            
+            if (userData.purchasedProducts && userData.purchasedProducts.length > 0) {
+                userData.purchasedProducts.forEach(product => {
+                    const listItem = document.createElement('li');
+                    listItem.className = 'list-group-item';
+                    listItem.textContent = `${product.title} (куплено: ${new Date(product.purchaseDate).toLocaleDateString()})`;
+                    purchasedProductsList.appendChild(listItem);
+                });
+            } else {
+                const listItem = document.createElement('li');
+                listItem.className = 'list-group-item text-center';
+                listItem.textContent = 'У вас пока нет покупок.';
+                purchasedProductsList.appendChild(listItem);
+            }
+        }
+
+        function loadPendingApprovals() {
+            const approvalList = document.getElementById('approvalList');
+            approvalList.innerHTML = '';
+            
+            if (!currentUser.isMom || pendingApprovals.length === 0) {
+                approvalList.innerHTML = '<p class="text-center">Нет заданий для подтверждения</p>';
+                return;
+            }
+            
+            pendingApprovals.forEach(approval => {
+                const approvalItem = document.createElement('div');
+                approvalItem.className = 'card mb-3';
+                approvalItem.innerHTML = `
+                    <div class="card-body">
+                        <h5 class="card-title">${approval.taskTitle}</h5>
+                        <p class="card-text">Выполнил(а): ${approval.userName}</p>
+                        <p class="card-text">Награда: <span class="coin-balance"><i class="fas fa-coins"></i> ${approval.coins}</span></p>
+                        <div class="approval-buttons">
+                            <button class="btn btn-success" onclick="approveTask('${approval.id}')">
+                                <i class="fas fa-check"></i> Подтвердить
+                            </button>
+                            <button class="btn btn-danger" onclick="rejectTask('${approval.id}')">
+                                <i class="fas fa-times"></i> Отклонить
+                            </button>
+                        </div>
+                    </div>
+                `;
+                approvalList.appendChild(approvalItem);
+            });
+        }
+
+        async function completeTask(taskId) {
+            if (currentUser.isMom) {
+                alert('Только дети могут выполнять задания!');
+                return;
+            }
+            
+            const task = tasks[taskId];
+            if (!task) return;
+            
+            try {
+                // Create a pending approval
+                const approvalId = `approval_${Date.now()}`;
+                const approvalData = {
+                    id: approvalId,
+                    taskId: taskId,
+                    taskTitle: task.title,
+                    userName: currentUser.name,
+                    coins: task.coins,
+                    timestamp: new Date().toISOString()
+                };
+                
+                await saveApprovalToFirebase(approvalId, approvalData);
+                pendingApprovals.push(approvalData);
+                userPendingTasks[taskId] = true;
+                
+                await addHistoryEntry(`${currentUser.name} выполнил(а) задание "${task.title}" и ожидает подтверждения`);
+                
+                alert('Задание отправлено на подтверждение маме!');
+                loadTasks();
+                
+            } catch (error) {
+                console.error('Ошибка выполнения задания:', error);
+                alert('Не удалось выполнить задание. Попробуйте еще раз.');
+            }
+        }
+
+        async function approveTask(approvalId) {
+            if (!currentUser.isMom) {
+                alert('Только мама может подтверждать задания!');
+                return;
+            }
+            
+            const approval = pendingApprovals.find(a => a.id === approvalId);
+            if (!approval) return;
+            
+            try {
+                // Remove from pending approvals
+                await deleteFromFirebase('pendingApprovals', approvalId);
+                pendingApprovals = pendingApprovals.filter(a => a.id !== approvalId);
+                
+                // Update user's coins
+                const userData = users[approval.userName];
+                userData.coins += approval.coins;
+                userData.tasksCompleted = (userData.tasksCompleted || 0) + 1;
+                
+                await saveUserToFirebase(approval.userName, userData);
+                
+                // Update mom's stats
+                const momData = users[currentUser.name];
+                momData.tasksApproved = (momData.tasksApproved || 0) + 1;
+                await saveUserToFirebase(currentUser.name, momData);
+                
+                await addHistoryEntry(`Мама подтвердила выполнение задания "${approval.taskTitle}" для ${approval.userName}. Награда: ${approval.coins} coins`);
+                
+                // Update UI
+                updateUI();
+                loadPendingApprovals();
+                
+            } catch (error) {
+                console.error('Ошибка подтверждения задания:', error);
+                alert('Не удалось подтвердить задание. Попробуйте еще раз.');
+            }
+        }
+
+        async function rejectTask(approvalId) {
+            if (!currentUser.isMom) {
+                alert('Только мама может отклонять задания!');
+                return;
+            }
+            
+            const approval = pendingApprovals.find(a => a.id === approvalId);
+            if (!approval) return;
+            
+            try {
+                // Remove from pending approvals
+                await deleteFromFirebase('pendingApprovals', approvalId);
+                pendingApprovals = pendingApprovals.filter(a => a.id !== approvalId);
+                
+                await addHistoryEntry(`Мама отклонила выполнение задания "${approval.taskTitle}" для ${approval.userName}`);
+                
+                // Update UI
+                loadPendingApprovals();
+                
+            } catch (error) {
+                console.error('Ошибка отклонения задания:', error);
+                alert('Не удалось отклонить задание. Попробуйте еще раз.');
+            }
+        }
+
+        async function purchaseProduct(productId) {
+            if (currentUser.isMom) {
+                alert('Только дети могут покупать товары!');
+                return;
+            }
+            
+            const product = products[productId];
+            const userData = users[currentUser.name];
+            
+            if (!product) return;
+            
+            if (userData.coins < product.price) {
+                alert('Недостаточно coins для покупки!');
+                return;
+            }
+            
+            try {
+                // Deduct coins
+                userData.coins -= product.price;
+                
+                // Add to purchased products
+                if (!userData.purchasedProducts) {
+                    userData.purchasedProducts = [];
+                }
+                
+                userData.purchasedProducts.push({
+                    title: product.title,
+                    price: product.price,
+                    purchaseDate: new Date().toISOString()
+                });
+                
+                await saveUserToFirebase(currentUser.name, userData);
+                
+                await addHistoryEntry(`${currentUser.name} купил(а) "${product.title}" за ${product.price} coins`);
+                
+                // Update UI
+                updateUI();
+                
+                alert(`Вы успешно купили "${product.title}"!`);
+                
+            } catch (error) {
+                console.error('Ошибка покупки товара:', error);
+                alert('Не удалось купить товар. Попробуйте еще раз.');
+            }
+        }
+
+        async function transferCoins() {
+            const recipientName = document.getElementById('transferRecipient').value;
+            const amount = parseInt(document.getElementById('transferAmount').value);
+            
+            if (!recipientName) {
+                alert('Выберите получателя!');
+                return;
+            }
+            
+            if (isNaN(amount) || amount <= 0) {
+                alert('Введите корректную сумму!');
+                return;
+            }
+            
+            const senderData = users[currentUser.name];
+            const recipientData = users[recipientName];
+            
+            if (!recipientData) {
+                alert('Получатель не найден!');
+                return;
+            }
+            
+            // Проверка баланса (только для детей)
+            if (!currentUser.isMom && senderData.coins < amount) {
+                alert('Недостаточно coins для перевода!');
+                return;
+            }
+            
+            try {
+                // Для детей: списываем coins
+                if (!currentUser.isMom) {
+                    senderData.coins -= amount;
+                    await saveUserToFirebase(currentUser.name, senderData);
+                }
+                
+                // Добавляем coins получателю
+                recipientData.coins += amount;
+                await saveUserToFirebase(recipientName, recipientData);
+                
+                await addHistoryEntry(`${currentUser.name} перевел(а) ${amount} coins ${recipientName}`);
+                
+                // Update UI
+                updateUI();
+                
+                alert(`Вы успешно перевели ${amount} coins ${recipientName}!`);
+                
+            } catch (error) {
+                console.error('Ошибка перевода coins:', error);
+                alert('Не удалось перевести coins. Попробуйте еще раз.');
+            }
+        }
+
+        async function createTask() {
+            if (!currentUser.isMom) {
+                alert('Только мама может создавать задания!');
+                return;
+            }
+            
+            const title = document.getElementById('taskTitle').value.trim();
+            const coins = parseInt(document.getElementById('taskCoins').value);
+            
+            if (!title) {
+                alert('Введите название задания!');
+                return;
+            }
+            
+            if (isNaN(coins) || coins <= 0) {
+                alert('Введите корректное количество coins!');
+                return;
+            }
+            
+            try {
+                const taskId = `task_${Date.now()}`;
+                const taskData = {
+                    title: title,
+                    coins: coins,
+                    createdBy: currentUser.name,
+                    createdAt: new Date().toISOString()
+                };
+                
+                await saveTaskToFirebase(taskId, taskData);
+                tasks[taskId] = taskData;
+                
+                // Update mom's stats
+                const momData = users[currentUser.name];
+                momData.tasksCreated = (momData.tasksCreated || 0) + 1;
+                await saveUserToFirebase(currentUser.name, momData);
+                
+                await addHistoryEntry(`Мама создала новое задание: "${title}" с наградой ${coins} coins`);
+                
+                // Clear form and update UI
+                document.getElementById('taskTitle').value = '';
+                document.getElementById('taskCoins').value = '1';
+                
+                loadTasks();
+                
+                alert('Задание успешно создано!');
+                
+            } catch (error) {
+                console.error('Ошибка создания задания:', error);
+                alert('Не удалось создать задание. Попробуйте еще раз.');
+            }
+        }
+
+        async function createProduct() {
+            if (!currentUser.isMom) {
+                alert('Только мама может добавлять товары!');
+                return;
+            }
+            
+            const title = document.getElementById('productTitle').value.trim();
+            const description = document.getElementById('productDescription').value.trim();
+            const price = parseInt(document.getElementById('productPrice').value);
+            
+            if (!title) {
+                alert('Введите название товара!');
+                return;
+            }
+            
+            if (isNaN(price) || price <= 0) {
+                alert('Введите корректную цену!');
+                return;
+            }
+            
+            try {
+                const productId = `product_${Date.now()}`;
+                const productData = {
+                    title: title,
+                    description: description,
+                    price: price,
+                    createdBy: currentUser.name,
+                    createdAt: new Date().toISOString()
+                };
+                
+                await saveProductToFirebase(productId, productData);
+                products[productId] = productData;
+                
+                await addHistoryEntry(`Мама добавила новый товар в магазин: "${title}" за ${price} coins`);
+                
+                // Clear form and update UI
+                document.getElementById('productTitle').value = '';
+                document.getElementById('productDescription').value = '';
+                document.getElementById('productPrice').value = '5';
+                
+                loadProducts();
+                
+                alert('Товар успешно добавлен в магазин!');
+                
+            } catch (error) {
+                console.error('Ошибка добавления товара:', error);
+                alert('Не удалось добавить товар. Попробуйте еще раз.');
+            }
+        }
+
+        async function resetSettings() {
+            if (!currentUser.isMom) {
+                alert('Только мама может сбрасывать настройки!');
+                return;
+            }
+            
+            if (!confirm('Вы уверены, что хотите сбросить все настройки? Это действие нельзя отменить!')) {
+                return;
+            }
+            
+            try {
+                // Delete all collections
+                await deleteCollection('users');
+                await deleteCollection('tasks');
+                await deleteCollection('products');
+                await deleteCollection('history');
+                await deleteCollection('pendingApprovals');
+                await deleteCollection('chat');
+                
+                // Reset local data
+                users = {};
+                tasks = {};
+                products = {};
+                history = [];
+                pendingApprovals = [];
+                momExists = false;
+                
+                // Logout current user
+                currentUser = null;
+                localStorage.removeItem('currentUser');
+                
+                alert('Все данные были успешно сброшены!');
+                
+                // Reload the page
+                location.reload();
+                
+            } catch (error) {
+                console.error('Ошибка сброса настроек:', error);
+                alert('Не удалось сбросить настройки. Попробуйте еще раз.');
+            }
+        }
+
+        async function addHistoryEntry(text) {
+            const timestamp = new Date().toISOString();
+            const historyEntry = {
+                text: text,
+                timestamp: timestamp
+            };
+            
+            history.unshift(historyEntry);
+            
+            try {
+                await firestore.collection('history').add(historyEntry);
+            } catch (error) {
+                console.error('Ошибка сохранения истории:', error);
+            }
+        }
+    </script>
+</body>
+              </html>
